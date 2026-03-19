@@ -5,6 +5,15 @@ import * as path from 'path';
 const DATA_DIR = path.resolve(import.meta.dirname!, '..', 'data');
 const OUT_DIR = path.resolve(import.meta.dirname!, '..', 'src', 'core', 'data', 'generated');
 
+const REQUIRED_FILES = [
+  'cards.xlsx',
+  'skills.xlsx',
+  'ai_teams.xlsx',
+  'stages.xlsx',
+  'balance.xlsx',
+  'asset_manifest.xlsx',
+];
+
 interface ValidationError {
   file: string;
   row: number;
@@ -17,17 +26,22 @@ const VALID_SKILL_TYPES = ['active', 'passive'];
 const VALID_SKILL_TARGETS = ['self', 'enemy', 'team'];
 const VALID_ASSET_CATEGORIES = ['card', 'pitch', 'ui', 'effect'];
 
-function readSheet<T>(filePath: string): T[] {
-  if (!fs.existsSync(filePath)) {
-    console.warn(`  ⚠ File not found: ${filePath}`);
-    return [];
+function checkRequiredFiles(): string[] {
+  const missing: string[] = [];
+  for (const file of REQUIRED_FILES) {
+    if (!fs.existsSync(path.join(DATA_DIR, file))) {
+      missing.push(file);
+    }
   }
+  return missing;
+}
+
+function readSheet<T>(filePath: string): T[] {
   const buf = fs.readFileSync(filePath);
   const wb = XLSX.read(buf, { type: 'buffer' });
   const sheetName = wb.SheetNames[0];
   if (!sheetName) {
-    console.warn(`  ⚠ No sheets in: ${filePath}`);
-    return [];
+    throw new Error(`No sheets found in: ${path.basename(filePath)}`);
   }
   const sheet = wb.Sheets[sheetName];
   return XLSX.utils.sheet_to_json<T>(sheet);
@@ -101,14 +115,39 @@ function validate(): ValidationError[] {
   });
 
   // Validate balance — type consistency
+  const seenBalanceKeys = new Set<string>();
   balance.forEach((b, i) => {
     const row = i + 2;
+    if (!b.key)
+      errors.push({ file: 'balance.xlsx', row, field: 'key', message: 'key is required' });
+    if (seenBalanceKeys.has(b.key as string))
+      errors.push({ file: 'balance.xlsx', row, field: 'key', message: `Duplicate key: ${b.key}` });
+    seenBalanceKeys.add(b.key as string);
+
     const declaredType = b.type as string;
+    if (!['number', 'string', 'boolean'].includes(declaredType))
+      errors.push({ file: 'balance.xlsx', row, field: 'type', message: `Invalid type: ${declaredType}. Must be number/string/boolean` });
+
     const value = b.value;
     if (declaredType === 'number' && typeof value !== 'number')
       errors.push({ file: 'balance.xlsx', row, field: 'value', message: `Expected number, got: ${typeof value}` });
     if (declaredType === 'boolean' && typeof value !== 'boolean' && value !== 'true' && value !== 'false')
       errors.push({ file: 'balance.xlsx', row, field: 'value', message: `Expected boolean, got: ${value}` });
+  });
+
+  // Validate asset_manifest
+  const assetManifest = readSheet<Record<string, unknown>>(path.join(DATA_DIR, 'asset_manifest.xlsx'));
+  const seenAssetKeys = new Set<string>();
+  assetManifest.forEach((a, i) => {
+    const row = i + 2;
+    if (!a.key)
+      errors.push({ file: 'asset_manifest.xlsx', row, field: 'key', message: 'key is required' });
+    if (seenAssetKeys.has(a.key as string))
+      errors.push({ file: 'asset_manifest.xlsx', row, field: 'key', message: `Duplicate key: ${a.key}` });
+    seenAssetKeys.add(a.key as string);
+
+    if (!VALID_ASSET_CATEGORIES.includes(a.category as string))
+      errors.push({ file: 'asset_manifest.xlsx', row, field: 'category', message: `Invalid category: ${a.category}. Must be card/pitch/ui/effect` });
   });
 
   return errors;
@@ -150,10 +189,18 @@ function transformBalance(raw: Record<string, unknown>[]): unknown[] {
   });
 }
 
-function build(): void {
+function build(): boolean {
   console.log('=== build-data: Excel → JSON ===');
   console.log(`  data dir:   ${DATA_DIR}`);
   console.log(`  output dir: ${OUT_DIR}`);
+
+  const missing = checkRequiredFiles();
+  if (missing.length > 0) {
+    console.error(`\n❌ Missing required xlsx files in data/:`);
+    for (const f of missing) console.error(`  - ${f}`);
+    console.error(`\nRun "npx tsx scripts/init-xlsx.ts" to generate template files.`);
+    return false;
+  }
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -164,7 +211,7 @@ function build(): void {
     for (const e of errors) {
       console.error(`  ${e.file} row ${e.row}, field "${e.field}": ${e.message}`);
     }
-    process.exit(1);
+    return false;
   }
   console.log('  ✓ All validation passed');
 
@@ -189,6 +236,7 @@ function build(): void {
   write('asset_manifest.json', assetManifest);
 
   console.log('\n[3/3] Done! ✓');
+  return true;
 }
 
 function write(filename: string, data: unknown): void {
@@ -198,4 +246,21 @@ function write(filename: string, data: unknown): void {
   console.log(`  → ${filename} (${count} entries)`);
 }
 
-build();
+function watch(): void {
+  console.log(`\n👀 Watching data/*.xlsx for changes...\n`);
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  fs.watch(DATA_DIR, (_event, filename) => {
+    if (!filename?.endsWith('.xlsx')) return;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      console.log(`\n--- ${filename} changed at ${new Date().toLocaleTimeString()} ---`);
+      build();
+    }, 300);
+  });
+}
+
+const isWatch = process.argv.includes('--watch');
+const ok = build();
+if (!ok) process.exit(1);
+if (isWatch) watch();
