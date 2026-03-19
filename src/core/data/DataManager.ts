@@ -43,6 +43,10 @@ export class DataManager implements IDataManager {
   }
 
   private async loadJSON<T>(name: string): Promise<T> {
+    // 快照模式：使用构建时预注入的内联数据
+    const inline = (globalThis as any).__INLINE_JSON__?.[name];
+    if (inline) return inline as T;
+
     const resp = await fetch(`/src/core/data/generated/${name}.json`);
     if (!resp.ok) throw new Error(`Failed to load ${name}.json: ${resp.status}`);
     return resp.json() as Promise<T>;

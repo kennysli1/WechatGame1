@@ -35,9 +35,14 @@ export class AssetManager {
   }
 
   async loadEntries(entries: AssetEntry[]): Promise<void> {
+    // 快照模式：使用构建时预注入的 base64 data URL
+    const inlineAssets: Record<string, string> | undefined =
+      (globalThis as any).__INLINE_ASSETS__;
+
     for (const entry of entries) {
       try {
-        const texture = await Assets.load<Texture>(entry.path);
+        const src = inlineAssets?.[entry.path] ?? entry.path;
+        const texture = await Assets.load<Texture>(src);
         this.textures.set(entry.key, texture);
       } catch {
         if (entry.required) {
