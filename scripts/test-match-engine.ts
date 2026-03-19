@@ -21,15 +21,18 @@ function name(id: string): string {
 
 function formatEvent(e: MatchEvent): string {
   switch (e.type) {
-    case 'kickoff':  return `[${String(e.minute).padStart(2)}'] ⚽ 开球`;
-    case 'pass':     return `[${String(e.minute).padStart(2)}'] ${e.success ? '✓' : '✗'} 传球 ${name(e.from)} → ${name(e.to)}`;
-    case 'tackle':   return `[${String(e.minute).padStart(2)}'] ${e.success ? '✓' : '✗'} 铲断 ${name(e.tackler)} → ${name(e.target)}`;
-    case 'shot':     return `[${String(e.minute).padStart(2)}'] ${e.onTarget ? '🎯' : '✗'} 射门 ${name(e.player)}`;
-    case 'save':     return `[${String(e.minute).padStart(2)}'] 🧤 扑救 ${name(e.goalkeeper)}`;
-    case 'goal':     return `[${String(e.minute).padStart(2)}'] ⚽ 进球! ${name(e.scorer)}${e.assist ? ` (助攻 ${name(e.assist)})` : ''}`;
-    case 'skill':    return `[${String(e.minute).padStart(2)}'] ✨ 技能 ${name(e.player)} → ${e.skillId}`;
-    case 'halftime': return `--- 中场休息 ---`;
-    case 'fulltime': return `--- 终场 ${e.homeGoals}-${e.awayGoals} ---`;
+    case 'kickoff':   return `[${String(e.minute).padStart(2)}'] ⚽ 开球`;
+    case 'pass':      return `[${String(e.minute).padStart(2)}'] ${e.success ? '✓' : '✗'} 传球 ${name(e.from)} → ${name(e.to)}`;
+    case 'dribble':   return `[${String(e.minute).padStart(2)}'] ${e.success ? '→' : '✗'} 带球 ${name(e.player)} (${e.fromPos.x.toFixed(2)},${e.fromPos.y.toFixed(2)})→(${e.toPos.x.toFixed(2)},${e.toPos.y.toFixed(2)})`;
+    case 'intercept': return `[${String(e.minute).padStart(2)}'] ${e.success ? '✓' : '✗'} 拦截 ${name(e.interceptor)} ↗ ${name(e.passer)}`;
+    case 'tackle':    return `[${String(e.minute).padStart(2)}'] ${e.success ? '✓' : '✗'} 铲断 ${name(e.tackler)} → ${name(e.target)}`;
+    case 'shot':      return `[${String(e.minute).padStart(2)}'] ${e.onTarget ? '🎯' : '✗'} 射门 ${name(e.player)}`;
+    case 'block':     return `[${String(e.minute).padStart(2)}'] 🛡️ 封堵 ${name(e.blocker)} ↗ ${name(e.shooter)}`;
+    case 'save':      return `[${String(e.minute).padStart(2)}'] 🧤 扑救 ${name(e.goalkeeper)}`;
+    case 'goal':      return `[${String(e.minute).padStart(2)}'] ⚽ 进球! ${name(e.scorer)}${e.assist ? ` (助攻 ${name(e.assist)})` : ''}`;
+    case 'skill':     return `[${String(e.minute).padStart(2)}'] ✨ 技能 ${name(e.player)} → ${e.skillId}`;
+    case 'halftime':  return `--- 中场休息 ---`;
+    case 'fulltime':  return `--- 终场 ${e.homeGoals}-${e.awayGoals} ---`;
   }
 }
 

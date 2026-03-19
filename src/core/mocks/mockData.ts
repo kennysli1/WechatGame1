@@ -79,13 +79,16 @@ export const MOCK_STAGES: StageDef[] = [
 ];
 
 export const MOCK_BALANCE: BalanceEntry[] = [
-  { key: 'passSuccessBase',  value: 0.7,  type: 'number', description: '基础传球成功率' },
-  { key: 'shotPowerWeight',  value: 0.4,  type: 'number', description: '射门力量权重（vs技术）' },
-  { key: 'homeAdvantage',    value: 1.05, type: 'number', description: '主场优势系数' },
-  { key: 'matchMinutes',     value: 90,   type: 'number', description: '比赛时长（分钟）' },
-  { key: 'eventsPerMinute',  value: 0.8,  type: 'number', description: '每分钟事件概率' },
-  { key: 'tackleBaseChance', value: 0.3,  type: 'number', description: '基础铲断触发概率' },
-  { key: 'shotChance',       value: 0.4,  type: 'number', description: '传球后射门概率' },
+  { key: 'passSuccessBase',     value: 0.7,  type: 'number', description: '基础传球成功率' },
+  { key: 'shotPowerWeight',     value: 0.4,  type: 'number', description: '射门力量权重（vs技术）' },
+  { key: 'homeAdvantage',       value: 1.05, type: 'number', description: '主场优势系数' },
+  { key: 'matchMinutes',        value: 90,   type: 'number', description: '比赛时长（分钟）' },
+  { key: 'eventsPerMinute',     value: 0.8,  type: 'number', description: '每分钟事件概率' },
+  { key: 'tackleBaseChance',    value: 0.3,  type: 'number', description: '铲断成功率基础参数' },
+  { key: 'shotChance',          value: 0.4,  type: 'number', description: '（保留兼容）传球后射门概率' },
+  { key: 'dribbleBaseSuccess',  value: 0.55, type: 'number', description: '带球过人基础成功率' },
+  { key: 'interceptBaseChance', value: 0.40, type: 'number', description: '防守方尝试拦截传球的概率' },
+  { key: 'blockBaseChance',     value: 0.25, type: 'number', description: '防守方尝试封堵射门的概率' },
 ];
 
 // ---------------------------------------------------------------------------

@@ -10,24 +10,6 @@ export interface Keyframe {
   y: number;   // 归一化 y（0=顶部，1=底部）
 }
 
-// ---------------------------------------------------------------------------
-// 弹出提示数据
-// ---------------------------------------------------------------------------
-export interface TipData {
-  /** 'rate' = 成功率条形弹窗；'skill' = 技能 ICON 弹窗 */
-  type: 'rate' | 'skill';
-  /** 主标签，如"传球成功率"或技能名 */
-  label: string;
-  /** 成功率 0-1（仅 'rate' 类型） */
-  rate?: number;
-  /** 技能 ID（仅 'skill' 类型，用于查找图标） */
-  skillId?: string;
-  /** 前置 emoji 图标 */
-  icon: string;
-  /** 结果是否"成功"（影响颜色） */
-  success?: boolean;
-}
-
 export interface AnimationStep {
   event: MatchEvent;
   durationMs: number;
@@ -38,26 +20,12 @@ export interface AnimationStep {
   highlightPlayers: string[];
   /** 是否触发进球特效 */
   isGoal: boolean;
-  /** 步骤开始时弹出的提示（成功率 / 技能）*/
-  tip?: TipData;
-}
-
-// ---------------------------------------------------------------------------
-// 确定性伪随机比率（基于 minute 哈希，保证回放稳定）
-// ---------------------------------------------------------------------------
-function pseudoRate(base: number, variance: number, minute: number): number {
-  const v = ((minute * 7 + 13) % 17) / 17;
-  return Math.max(0.10, Math.min(0.95, base + (v - 0.5) * variance));
-}
-
-/** 将 snake_case 的 skillId 转换为可读的中英文展示名 */
-function formatSkillId(skillId: string): string {
-  return skillId.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------------------
 // 辅助：获取球员在球场上的归一化位置
 // ---------------------------------------------------------------------------
+
 function getPlayerPos(
   playerId: string,
   home: Team,
@@ -86,6 +54,7 @@ function goalPos(side: 'left' | 'right'): { x: number; y: number } {
 // ---------------------------------------------------------------------------
 // MatchAnimator
 // ---------------------------------------------------------------------------
+
 export class MatchAnimator {
   /**
    * 将 MatchEvent[] 转为带位置动画数据的 AnimationStep[]。
@@ -139,19 +108,64 @@ export class MatchAnimator {
               ],
           highlightPlayers: [event.from, event.to],
           isGoal: false,
-          tip: {
-            type: 'rate',
-            label: '传球成功率',
-            rate: pseudoRate(event.success ? 0.72 : 0.30, 0.18, event.minute),
-            icon: event.success ? '✅' : '❌',
-            success: event.success,
-          },
+        };
+      }
+
+      case 'dribble': {
+        // 事件中内嵌了绝对坐标，直接使用
+        const { fromPos, toPos } = event;
+        const player = getPlayerPos(event.player, home, away) ?? fromPos;
+        return {
+          event,
+          durationMs: event.success ? 900 : 700,
+          description: event.success
+            ? `${event.player} 带球推进`
+            : `${event.player} 带球被断`,
+          ballKeyframes: event.success
+            ? [
+                { t: 0,   x: fromPos.x, y: fromPos.y },
+                { t: 0.4, x: (fromPos.x + toPos.x) / 2, y: (fromPos.y + toPos.y) / 2 - 0.03 },
+                { t: 1,   x: toPos.x,   y: toPos.y },
+              ]
+            : [
+                { t: 0, x: fromPos.x, y: fromPos.y },
+                { t: 1, x: fromPos.x, y: fromPos.y },
+              ],
+          highlightPlayers: [event.player],
+          isGoal: false,
+        };
+      }
+
+      case 'intercept': {
+        const interceptorPos = getPlayerPos(event.interceptor, home, away) ?? centerPos();
+        const passerPos      = getPlayerPos(event.passer,      home, away) ?? centerPos();
+        const midX = (passerPos.x + interceptorPos.x) / 2;
+        const midY = (passerPos.y + interceptorPos.y) / 2;
+        return {
+          event,
+          durationMs: event.success ? 1000 : 600,
+          description: event.success
+            ? `💥 ${event.interceptor} 成功拦截 ${event.passer} 的传球`
+            : `${event.interceptor} 尝试拦截失败`,
+          ballKeyframes: event.success
+            ? [
+                { t: 0,   x: passerPos.x,      y: passerPos.y },
+                { t: 0.5, x: midX,             y: midY },
+                { t: 1,   x: interceptorPos.x, y: interceptorPos.y },
+              ]
+            : [
+                { t: 0, x: passerPos.x, y: passerPos.y },
+                { t: 1, x: passerPos.x, y: passerPos.y },
+              ],
+          highlightPlayers: event.success
+            ? [event.interceptor, event.passer]
+            : [event.interceptor],
+          isGoal: false,
         };
       }
 
       case 'shot': {
         const shooter = getPlayerPos(event.player, home, away) ?? centerPos();
-        // 射门方向：判断球员在哪一侧 → 射向对面球门
         const targetGoal = goalPos(shooter.x < 0.5 ? 'right' : 'left');
         return {
           event,
@@ -161,24 +175,38 @@ export class MatchAnimator {
             : `${event.player} 射门偏出`,
           ballKeyframes: event.onTarget
             ? [
-                { t: 0, x: shooter.x, y: shooter.y },
+                { t: 0,   x: shooter.x, y: shooter.y },
                 { t: 0.4, x: (shooter.x + targetGoal.x) * 0.5, y: shooter.y - 0.05 },
                 { t: 1,   x: targetGoal.x, y: targetGoal.y },
               ]
             : [
-                { t: 0, x: shooter.x, y: shooter.y },
+                { t: 0,   x: shooter.x, y: shooter.y },
                 { t: 0.6, x: (shooter.x + targetGoal.x) * 0.55, y: shooter.y + 0.12 },
                 { t: 1,   x: targetGoal.x + (targetGoal.x > 0.5 ? 0.05 : -0.05), y: shooter.y + 0.18 },
               ],
           highlightPlayers: [event.player],
           isGoal: false,
-          tip: {
-            type: 'rate',
-            label: '射门命中率',
-            rate: pseudoRate(event.onTarget ? 0.48 : 0.22, 0.16, event.minute),
-            icon: event.onTarget ? '🎯' : '💨',
-            success: event.onTarget,
-          },
+        };
+      }
+
+      case 'block': {
+        const blockerPos  = getPlayerPos(event.blocker,  home, away) ?? centerPos();
+        const shooterPos  = getPlayerPos(event.shooter,  home, away) ?? centerPos();
+        const targetGoal  = goalPos(shooterPos.x < 0.5 ? 'right' : 'left');
+        const midX = (shooterPos.x + targetGoal.x) / 2;
+        const midY = (shooterPos.y + targetGoal.y) / 2;
+        return {
+          event,
+          durationMs: 900,
+          description: `🛡️ ${event.blocker} 封堵了 ${event.shooter} 的射门`,
+          ballKeyframes: [
+            { t: 0,   x: shooterPos.x, y: shooterPos.y },
+            { t: 0.4, x: midX,         y: midY - 0.04 },
+            { t: 0.6, x: blockerPos.x, y: blockerPos.y },
+            { t: 1,   x: blockerPos.x + (blockerPos.x < 0.5 ? -0.05 : 0.05), y: blockerPos.y + 0.05 },
+          ],
+          highlightPlayers: [event.blocker, event.shooter],
+          isGoal: false,
         };
       }
 
@@ -189,24 +217,17 @@ export class MatchAnimator {
           durationMs: 1200,
           description: `🧤 ${event.goalkeeper} 精彩扑救！`,
           ballKeyframes: [
-            { t: 0, x: gkPos.x, y: gkPos.y },
+            { t: 0,   x: gkPos.x, y: gkPos.y },
             { t: 0.3, x: gkPos.x + (gkPos.x < 0.5 ? -0.02 : 0.02), y: gkPos.y - 0.1 },
-            { t: 1, x: gkPos.x + (gkPos.x < 0.5 ? 0.05 : -0.05), y: gkPos.y + 0.05 },
+            { t: 1,   x: gkPos.x + (gkPos.x < 0.5 ? 0.05 : -0.05), y: gkPos.y + 0.05 },
           ],
           highlightPlayers: [event.goalkeeper],
           isGoal: false,
-          tip: {
-            type: 'rate',
-            label: '扑救成功率',
-            rate: pseudoRate(0.55, 0.22, 0),
-            icon: '🧤',
-            success: true,
-          },
         };
       }
 
       case 'goal': {
-        const scorerPos = getPlayerPos(event.scorer, home, away) ?? centerPos();
+        const scorerPos  = getPlayerPos(event.scorer, home, away) ?? centerPos();
         const targetGoal = goalPos(scorerPos.x < 0.5 ? 'right' : 'left');
         return {
           event,
@@ -215,7 +236,7 @@ export class MatchAnimator {
             ? `🎉 进球！${event.scorer}（助攻：${event.assist}）`
             : `🎉 进球！${event.scorer}`,
           ballKeyframes: [
-            { t: 0,   x: scorerPos.x, y: scorerPos.y },
+            { t: 0,   x: scorerPos.x,  y: scorerPos.y },
             { t: 0.3, x: (scorerPos.x + targetGoal.x) * 0.5, y: scorerPos.y - 0.06 },
             { t: 1,   x: targetGoal.x, y: targetGoal.y },
           ],
@@ -236,19 +257,12 @@ export class MatchAnimator {
             ? `💥 ${event.tackler} 成功铲断 ${event.target}`
             : `${event.tackler} 铲球失败`,
           ballKeyframes: [
-            { t: 0,   x: targetPos.x, y: targetPos.y },
+            { t: 0,   x: targetPos.x,  y: targetPos.y },
             { t: 0.5, x: (tacklerPos.x + targetPos.x) / 2, y: (tacklerPos.y + targetPos.y) / 2 },
             { t: 1,   x: event.success ? tacklerPos.x : targetPos.x + 0.05, y: tacklerPos.y },
           ],
           highlightPlayers: [event.tackler, event.target],
           isGoal: false,
-          tip: {
-            type: 'rate',
-            label: '铲球成功率',
-            rate: pseudoRate(event.success ? 0.55 : 0.28, 0.20, event.minute),
-            icon: event.success ? '🛡️' : '💢',
-            success: event.success,
-          },
         };
       }
 
@@ -264,13 +278,6 @@ export class MatchAnimator {
           ],
           highlightPlayers: [event.player, ...event.targets],
           isGoal: false,
-          tip: {
-            type: 'skill',
-            label: formatSkillId(event.skillId),
-            skillId: event.skillId,
-            icon: '✨',
-            success: true,
-          },
         };
       }
 

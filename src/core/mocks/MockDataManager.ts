@@ -78,13 +78,16 @@ const STAGES: StageDef[] = [
 ];
 
 const BALANCE: Record<string, number | string | boolean> = {
-  passSuccessBase:  0.7,
-  shotPowerWeight:  0.4,
-  homeAdvantage:    1.05,
-  matchMinutes:     90,
-  eventsPerMinute:  0.8,
-  tackleBaseChance: 0.3,
-  shotChance:       0.4,
+  passSuccessBase:     0.7,
+  shotPowerWeight:     0.4,
+  homeAdvantage:       1.05,
+  matchMinutes:        90,
+  eventsPerMinute:     0.8,
+  tackleBaseChance:    0.3,
+  shotChance:          0.4,
+  dribbleBaseSuccess:  0.55,
+  interceptBaseChance: 0.40,
+  blockBaseChance:     0.25,
 };
 
 // ---------------------------------------------------------------------------
