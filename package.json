@@ -5,18 +5,22 @@
   "type": "module",
   "scripts": {
     "data": "tsx scripts/build-data.ts",
-    "data:watch": "tsx watch scripts/build-data.ts",
+    "data:watch": "tsx scripts/build-data.ts --watch",
     "dev": "npm run data && vite",
     "build": "npm run data && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "pixi.js": "^8.6.6"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.19.3",
     "typescript": "^5.7.3",
     "vite": "^6.2.2",
-    "tsx": "^4.19.3",
+    "vitest": "^4.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }
 }

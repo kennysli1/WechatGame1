@@ -30,6 +30,8 @@
 | ✅ 完成 | 平台抽象层 (IPlatform/WebPlatform) |
 | ✅ 完成 | 存档管理 (SaveManager) |
 | ✅ 完成 | PROJECT.md 文档初始化 |
+| ✅ 完成 | Vitest 测试框架 + WebPlatform/SaveManager 单元测试 (38 tests) |
+| ✅ 完成 | MockPlatform (测试/并行开发用) |
 
 ### 下一步: M1 — 核心逻辑完善
 
@@ -88,5 +90,7 @@
 | 平台抽象 | `src/platform/IPlatform.ts` | ✅ |
 | Web平台 | `src/platform/WebPlatform.ts` | ✅ |
 | 微信平台 | `src/platform/WxPlatform.ts` | 🔲 占位 |
-| 存档管理 | `src/storage/SaveManager.ts` | ✅ |
+| 存档管理 | `src/storage/SaveManager.ts` | ✅ 已测试 |
+| MockPlatform | `src/core/mocks/MockPlatform.ts` | ✅ |
+| 单元测试 | `src/__tests__/*.test.ts` | ✅ 38 tests |
 | 可种子随机 | `src/utils/random.ts` | ✅ |

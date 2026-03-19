@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
@@ -14,5 +15,9 @@ export default defineConfig({
   build: {
     target: 'es2022',
     outDir: 'dist',
+  },
+  test: {
+    globals: true,
+    environment: 'node',
   },
 });
