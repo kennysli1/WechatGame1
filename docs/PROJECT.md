@@ -1,4 +1,4 @@
-# 热血球球 — 项目总览
+﻿# 热血球球 — 项目总览
 
 > 最后更新: 2026-03-19
 
@@ -75,10 +75,28 @@
 | ✅ 完成 | 射门轨迹动画帧 ×3 — assets/effects/shot_trail/ |
 | ✅ 完成 | ASSET_MANIFEST.md 更新所有状态为已完成 |
 
+### 已完成: M1-D — 比赛回放动画 (2026-03-19)
+
+| 状态 | 任务 |
+|------|------|
+| ✅ 完成 | MockMatchEngine — 实现 IMatchEngine，simulate() 返回固定 MatchResult（3:1），不依赖任何外部系统 |
+| ✅ 完成 | mockData.ts 扩展 — 28个固定 MatchEvent（传球/射门/扑救/进球/铲断/中场/终场），7张 Mock 球员卡，2支完整队伍 |
+| ✅ 完成 | MockDataManager 所需集合导出补充（MOCK_CARDS/SKILLS/AI_TEAMS/STAGES/BALANCE） |
+| ✅ 完成 | MatchAnimator 增强 — 新增 Keyframe 位置关键帧（归一化坐标）、ballKeyframes 球运动路径、highlightPlayers 高亮列表、isGoal 标志 |
+| ✅ 完成 | MatchAnimator.buildTimeline() 接受可选 home/away Team，查找球员真实位置生成精准轨迹 |
+| ✅ 完成 | 每种事件的球轨迹：传球走直线、失误偏出、射门飞弧线、射偏、扑救反弹、铲断拼抢 |
+| ✅ 完成 | MatchScene 重构 — 顶部固定比分栏（含实时分钟显示） |
+| ✅ 完成 | MatchScene — 球场内主队（蓝色）/客队（红色）球员圆点，含名字缩写标签 |
+| ✅ 完成 | MatchScene — 金色球每帧在 Keyframe 间平滑插值移动 |
+| ✅ 完成 | MatchScene — 参与当前事件的球员高亮放大（1.35×），其余淡化（0.75透明度） |
+| ✅ 完成 | MatchScene — 进球触发全屏金色闪光覆盖 + 大字特效，1.2s 内平滑淡出 |
+| ✅ 完成 | MatchScene — 实时比分更新（homePlayerIds 判断进球归属；无队伍信息时降级比例策略） |
+| ✅ 完成 | MatchScene — 导出 MatchSceneData 接口，支持传入 homeTeam/awayTeam |
+| ✅ 完成 | main.ts — FormationScene → MatchScene 时同时传入 homeTeam/awayTeam 驱动球员点渲染 |
+
 ### 下一步: M1 — 其他模块完善
 
 - 布阵界面完善 (Mod-C)
-- 比赛回放动画 (Mod-D)
 - 填充更多球员卡和技能数据
 
 ## 架构
@@ -130,9 +148,9 @@
 | 主菜单 | `src/render/scenes/MenuScene.ts` | ✅ +设置按钮 |
 | 关卡选择 | `src/render/scenes/StageSelectScene.ts` | ✅ 完整 |
 | 布阵界面 | `src/render/scenes/FormationScene.ts` | ✅ 骨架 |
-| 比赛回放 | `src/render/scenes/MatchScene.ts` | ✅ 骨架 |
+| 比赛回放 | `src/render/scenes/MatchScene.ts` | ✅ 球员点位+球动画+进球特效 |
 | 结算界面 | `src/render/scenes/ResultScene.ts` | ✅ 进球/MVP/奖励/下一关 |
-| 比赛动画 | `src/render/animations/MatchAnimator.ts` | ✅ 骨架 |
+| 比赛动画 | `src/render/animations/MatchAnimator.ts` | ✅ Keyframe位置关键帧+轨迹 |
 | 球员卡视图 | `src/render/components/CardView.ts` | ✅ fallback |
 | 球场视图 | `src/render/components/PitchView.ts` | ✅ |
 | 平台抽象 | `src/platform/IPlatform.ts` | ✅ |
