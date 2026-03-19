@@ -212,3 +212,16 @@ npx tsx scripts/test-match-engine.ts  # 比赛引擎控制台测试（6项）
 5. **本文件** — 更新 `AI_CONTEXT.md` 第 7 节「当前进度」及相关章节
 
 提交信息格式：`[Mod-X] 简要描述` 或 `[P2] 简要描述`
+
+---
+
+## 11. 工作流规范（每次必须严格执行，禁止跳过）
+
+**完成代码修改后，必须按以下步骤操作，不得乱序、不得省略：**
+
+1. 执行 `npm run preview:static`，生成最新的 `功夫足球_preview.html` 快照文件
+2. 告知用户：「快照已更新，请双击 `功夫足球_preview.html` 在浏览器中验收」
+3. **等待用户明确回复验收通过**，再进行下一步
+4. 用户确认后，执行 `git add` / `git commit` / `git push`
+
+> ⚠️ **严禁**在用户验收前执行任何 git 操作（add / commit / push）

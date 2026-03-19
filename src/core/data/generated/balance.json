@@ -33,13 +33,13 @@
     "key": "tackleBaseChance",
     "value": 0.3,
     "type": "number",
-    "description": "铲断成功率基础参数"
+    "description": "基础铲断触发概率"
   },
   {
     "key": "shotChance",
     "value": 0.4,
     "type": "number",
-    "description": "（保留兼容）传球后射门概率"
+    "description": "传球后射门概率"
   },
   {
     "key": "dribbleBaseSuccess",
@@ -49,7 +49,7 @@
   },
   {
     "key": "interceptBaseChance",
-    "value": 0.40,
+    "value": 0.4,
     "type": "number",
     "description": "防守方尝试拦截传球的概率"
   },
