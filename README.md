@@ -23,7 +23,7 @@ npx tsx scripts/init-xlsx.ts
 npm run dev
 ```
 
-打开浏览器访问 `http://localhost:5173` 即可预览。
+打开浏览器访问 `http://localhost:3000`（端口被占用时自动递增）即可预览。
 
 ### 常用命令
 
@@ -34,6 +34,8 @@ npm run dev
 | `npm run data:watch` | 监听 Excel 变更自动重建 |
 | `npm run build` | 构建生产版本 |
 | `npm run preview` | 预览生产构建 |
+| `npm test` | 运行单元测试（Vitest，38 项） |
+| `npx tsx scripts/test-match-engine.ts` | 比赛引擎控制台测试（6 项） |
 
 ## 技术栈
 
@@ -60,21 +62,22 @@ WechatGame1/
 │   ├── build-data.ts        #   Excel → JSON 转换 + 校验
 │   └── init-xlsx.ts         #   初始化空 Excel 模板
 ├── src/
-│   ├── main.ts              # 入口
+│   ├── main.ts              # 入口（6 场景完整流转）
 │   ├── core/                # 纯游戏逻辑（零渲染依赖）
-│   │   ├── models/          #   数据模型 (Card, Team, MatchEvent)
-│   │   ├── systems/         #   游戏系统 (MatchEngine, AIOpponent)
-│   │   ├── data/            #   DataManager + 类型定义 + generated JSON
+│   │   ├── models/          #   数据模型 (Card, Team, MatchEvent, MatchResult)
+│   │   ├── systems/         #   游戏系统 (MatchEngine + 技能, AIOpponent, FormationValidator)
+│   │   ├── data/            #   IDataManager 接口 + DataManager + 类型定义 + generated JSON
+│   │   ├── mocks/           #   开发期 Mock（MockDataManager / MockAssetManager / MockMatchEngine 等）
 │   │   └── events/          #   事件总线
 │   ├── render/              # PixiJS 渲染层
-│   │   ├── scenes/          #   场景 (Menu, Formation, Match, Result)
-│   │   ├── components/      #   UI 组件 (CardView, PitchView, Button)
-│   │   ├── animations/      #   比赛动画 (MatchAnimator)
-│   │   ├── AssetManager.ts  #   资源加载 + fallback
+│   │   ├── scenes/          #   6 个场景 (Menu, StageSelect, Formation, Match, Result)
+│   │   ├── components/      #   UI 组件 (CardView, PitchView + 位置槽, Button, Panel)
+│   │   ├── animations/      #   比赛动画 (MatchAnimator + 球路径关键帧)
+│   │   ├── AssetManager.ts  #   资源加载 + fallback + 热替换
 │   │   └── SceneManager.ts  #   场景切换管理
-│   ├── platform/            # 平台抽象 (Web / 微信)
-│   ├── storage/             # 存档管理
-│   └── utils/               # 工具 (随机数、数学)
+│   ├── platform/            # 平台抽象 (IPlatform → WebPlatform / WxPlatform 占位)
+│   ├── storage/             # 存档管理 (SaveManager，已通过单元测试)
+│   └── utils/               # 工具 (SeededRandom 可种子随机、数学辅助)
 ├── assets/                  # 美术资源（90% AI 生成）    → 详见 assets/ASSET_MANIFEST.md
 └── docs/                    # 项目文档                   → 详见下方「文档索引」
 ```
@@ -97,23 +100,25 @@ WechatGame1/
 
 定义所有模块接口和 Mock 实现，搭建项目骨架，使后续模块可完全独立开发。
 
-### P1: 并行模块开发（当前阶段）
+### P1: 并行模块开发 ✅ 全部完成
 
-7 个模块可同时推进，每个模块通过 Mock 依赖独立运行和测试：
+7 个模块均已实现，通过各自 Mock 依赖独立验证：
 
 | 模块 | 范围 | 状态 |
 |------|------|------|
-| Mod-A 数据管线 | Excel→JSON 转换 + DataManager | 🔲 待开始 |
-| Mod-B 比赛引擎 | MatchEngine + AIOpponent | 🔲 待开始 |
-| Mod-C 布阵界面 | 球场 + 卡片 + 拖拽交互 | 🔲 待开始 |
-| Mod-D 比赛回放 | 事件→动画 + 比赛播放 | 🔲 待开始 |
-| Mod-E 结算+菜单 | 菜单 / 关卡选择 / 结算 | 🔲 待开始 |
-| Mod-F 平台+存储 | localStorage 封装 + 存档 | 🔲 待开始 |
-| Mod-G AI 美术 | AI 生成全部图片资源 | 🔲 待开始 |
+| Mod-A 数据管线 | Excel→JSON 转换 + DataManager + 强化校验 | ✅ 完成 |
+| Mod-B 比赛引擎 | MatchEngine（技能+位置+主场） + AIOpponent | ✅ 完成 |
+| Mod-C 布阵界面 | PitchView（位置槽）+ CardView + FormationScene 拖拽 | ✅ 完成 |
+| Mod-D 比赛回放 | MatchAnimator（球路径+高亮）+ MatchScene 动画播放 | ✅ 完成 |
+| Mod-E 结算+菜单 | MenuScene + StageSelectScene + ResultScene（奖励/MVP）| ✅ 完成 |
+| Mod-F 平台+存储 | WebPlatform + SaveManager（38 项单元测试） | ✅ 完成 |
+| Mod-G AI 美术 | 24 个 AI 生成图片资源（卡面/球场/UI/特效） | ✅ 完成 |
 
-### P2: 集成与联调
+### P2: 集成与联调（下一阶段）
 
-替换 Mock 为真实实现 → 端到端流转测试 → 平衡调优。预计 1-1.5 天。
+当前已完成 `main.ts` 的完整 6 场景流转（菜单→关卡选择→布阵→比赛→结算→返回），核心路径已可运行。
+
+下一步：全面替换 Mock → 真实实现，端到端压测，平衡参数调优，微信小游戏适配。
 
 ### 后续规划
 
