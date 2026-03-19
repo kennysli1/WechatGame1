@@ -1,0 +1,80 @@
+[
+  {
+    "id": "skill_save",
+    "name": "神扑",
+    "description": "提升扑救成功率",
+    "type": "passive",
+    "target": "self",
+    "effectType": "buff_defense",
+    "effectValue": 15,
+    "duration": 0,
+    "triggerCondition": "on_shot",
+    "animKey": "anim_save",
+    "cooldown": 0
+  },
+  {
+    "id": "skill_tackle",
+    "name": "飞铲",
+    "description": "提升铲断能力",
+    "type": "passive",
+    "target": "self",
+    "effectType": "buff_defense",
+    "effectValue": 12,
+    "duration": 0,
+    "triggerCondition": "on_tackle",
+    "animKey": "anim_tackle",
+    "cooldown": 0
+  },
+  {
+    "id": "skill_shot",
+    "name": "暴力射门",
+    "description": "提升射门威力",
+    "type": "active",
+    "target": "self",
+    "effectType": "buff_attack",
+    "effectValue": 20,
+    "duration": 1,
+    "triggerCondition": "on_shot",
+    "animKey": "anim_power_shot",
+    "cooldown": 3
+  },
+  {
+    "id": "skill_dribble",
+    "name": "灵巧过人",
+    "description": "提升突破成功率",
+    "type": "active",
+    "target": "self",
+    "effectType": "buff_speed",
+    "effectValue": 18,
+    "duration": 1,
+    "triggerCondition": "on_pass",
+    "animKey": "anim_dribble",
+    "cooldown": 2
+  },
+  {
+    "id": "skill_through",
+    "name": "致命直塞",
+    "description": "提升传球精准度",
+    "type": "active",
+    "target": "team",
+    "effectType": "buff_technique",
+    "effectValue": 15,
+    "duration": 2,
+    "triggerCondition": "on_pass",
+    "animKey": "anim_through",
+    "cooldown": 3
+  },
+  {
+    "id": "skill_freekick",
+    "name": "任意球大师",
+    "description": "获得额外定位球机会",
+    "type": "active",
+    "target": "self",
+    "effectType": "buff_technique",
+    "effectValue": 25,
+    "duration": 1,
+    "triggerCondition": "on_shot",
+    "animKey": "anim_freekick",
+    "cooldown": 5
+  }
+]

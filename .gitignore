@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.local
+
+# Excel temp files
+~$*.xlsx
+*.tmp

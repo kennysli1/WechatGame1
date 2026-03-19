@@ -1,0 +1,101 @@
+[
+  {
+    "key": "card_gk_001",
+    "path": "assets/cards/card_gk_001.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "守门员001卡面"
+  },
+  {
+    "key": "card_df_001",
+    "path": "assets/cards/card_df_001.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "后卫001卡面"
+  },
+  {
+    "key": "card_df_002",
+    "path": "assets/cards/card_df_002.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "后卫002卡面"
+  },
+  {
+    "key": "card_mf_001",
+    "path": "assets/cards/card_mf_001.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "中场001卡面"
+  },
+  {
+    "key": "card_mf_002",
+    "path": "assets/cards/card_mf_002.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "中场002卡面"
+  },
+  {
+    "key": "card_fw_001",
+    "path": "assets/cards/card_fw_001.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "前锋001卡面"
+  },
+  {
+    "key": "card_fw_002",
+    "path": "assets/cards/card_fw_002.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "前锋002卡面"
+  },
+  {
+    "key": "card_fw_003",
+    "path": "assets/cards/card_fw_003.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "前锋003卡面"
+  },
+  {
+    "key": "pitch_bg",
+    "path": "assets/pitch/pitch_bg.png",
+    "width": 1136,
+    "height": 640,
+    "category": "pitch",
+    "required": false,
+    "description": "球场全景背景"
+  },
+  {
+    "key": "btn_primary",
+    "path": "assets/ui/btn_primary.png",
+    "width": 200,
+    "height": 56,
+    "category": "ui",
+    "required": false,
+    "description": "主按钮"
+  },
+  {
+    "key": "logo",
+    "path": "assets/ui/logo.png",
+    "width": 512,
+    "height": 256,
+    "category": "ui",
+    "required": false,
+    "description": "游戏Logo"
+  }
+]

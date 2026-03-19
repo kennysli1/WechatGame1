@@ -1,0 +1,29 @@
+[
+  {
+    "stageId": "stage_001",
+    "name": "新手试炼",
+    "aiTeamId": "ai_team_001",
+    "unlockAfterStage": "",
+    "rewardCardId": "mf_001",
+    "rewardCoins": 100,
+    "description": "你的第一场比赛"
+  },
+  {
+    "stageId": "stage_002",
+    "name": "城市联赛",
+    "aiTeamId": "ai_team_002",
+    "unlockAfterStage": "stage_001",
+    "rewardCardId": "fw_001",
+    "rewardCoins": 200,
+    "description": "面对更强的对手"
+  },
+  {
+    "stageId": "stage_003",
+    "name": "冠军之路",
+    "aiTeamId": "ai_team_003",
+    "unlockAfterStage": "stage_002",
+    "rewardCardId": "fw_003",
+    "rewardCoins": 500,
+    "description": "终极挑战"
+  }
+]
