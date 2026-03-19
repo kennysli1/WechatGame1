@@ -1,4 +1,4 @@
-﻿# 热血球球 — 项目总览
+# 热血球球 — 项目总览
 
 > 最后更新: 2026-03-19
 
@@ -94,10 +94,34 @@
 | ✅ 完成 | MatchScene — 导出 MatchSceneData 接口，支持传入 homeTeam/awayTeam |
 | ✅ 完成 | main.ts — FormationScene → MatchScene 时同时传入 homeTeam/awayTeam 驱动球员点渲染 |
 
+### 已完成: M1-C — 布阵界面完整实现 (2026-03-19)
+
+| 状态 | 任务 |
+|------|------|
+| ✅ 完成 | MockDataManager — 8 张硬编码球员卡 + 技能 + AI 队伍，无网络请求，开发期独立注入 |
+| ✅ 完成 | MockAssetManager — 所有 getTexture() 返回空纹理，加载 / 替换接口均为 no-op |
+| ✅ 完成 | PitchView 重写 — 支持自定义宽高（默认 700×420），横向球场坐标系 |
+| ✅ 完成 | PitchView — PositionSlot 类：7 个位置槽（GK×1、CB×2、CM×2、FWD×2） |
+| ✅ 完成 | PitchView — 槽状态：空/悬停金色高亮/已放置（彩色实心圆 + 球员名） |
+| ✅ 完成 | PitchView — 方法：getNearestSlot()、updateHoverHighlight()、clearHighlights() |
+| ✅ 完成 | PitchView — 视觉细节：条纹草地、禁区、球门区、点球点、"← 防守 / 进攻 →" 标签 |
+| ✅ 完成 | CardView 增强 — 导出 CARD_WIDTH/CARD_HEIGHT 常量 |
+| ✅ 完成 | CardView — setPlaced(bool)：已上场显示半透明遮罩 + 绿色 "✓ 上场" 徽章 |
+| ✅ 完成 | CardView — 改进卡面：属性色标（攻=红/守=绿/速=蓝/技=黄）、位置中文徽章 |
+| ✅ 完成 | FormationScene 重写 — 布局：标题栏(46px) + 球场(700×420) + 验证区 + 底部卡牌托盘(162px) |
+| ✅ 完成 | FormationScene — 底部托盘：8 张卡以 0.6× 缩放横向排列，不与球场重叠 |
+| ✅ 完成 | FormationScene — 拖拽：pointerdown 生成 ghost → globalpointermove 跟随鼠标 + 高亮最近槽 |
+| ✅ 完成 | FormationScene — pointerup/pointerupoutside 完成放置（64px 吸附阈值）或取消拖拽 |
+| ✅ 完成 | FormationScene — 点击已占槽可撤回球员；拖入已占槽自动顶出前者 |
+| ✅ 完成 | FormationScene — 集成 FormationValidator：实时校验，未达标禁用"确认出战"按钮 |
+| ✅ 完成 | FormationScene — 支持 dataManager 构造注入（MockDataManager 或 DataManager 均可） |
+| ✅ 完成 | FormationScene — onBack 回调，顶部"← 返回"按钮 |
+| ✅ 完成 | main.ts — FormationScene 注入 dataManager + onBack 参数 |
+
 ### 下一步: M1 — 其他模块完善
 
-- 布阵界面完善 (Mod-C)
 - 填充更多球员卡和技能数据
+- P2 集成阶段：替换全部 Mock → 真实实现，端到端联调
 
 ## 架构
 
@@ -147,12 +171,13 @@
 | 场景管理 | `src/render/SceneManager.ts` | ✅ |
 | 主菜单 | `src/render/scenes/MenuScene.ts` | ✅ +设置按钮 |
 | 关卡选择 | `src/render/scenes/StageSelectScene.ts` | ✅ 完整 |
-| 布阵界面 | `src/render/scenes/FormationScene.ts` | ✅ 骨架 |
-| 比赛回放 | `src/render/scenes/MatchScene.ts` | ✅ 球员点位+球动画+进球特效 |
+| 布阵界面 | `src/render/scenes/FormationScene.ts` | ✅ 完整拖拽布阵 |
+| 比赛回放 | `src/render/scenes/MatchScene.ts` | ✅ 骨架 |
 | 结算界面 | `src/render/scenes/ResultScene.ts` | ✅ 进球/MVP/奖励/下一关 |
-| 比赛动画 | `src/render/animations/MatchAnimator.ts` | ✅ Keyframe位置关键帧+轨迹 |
-| 球员卡视图 | `src/render/components/CardView.ts` | ✅ fallback |
-| 球场视图 | `src/render/components/PitchView.ts` | ✅ |
+| 比赛动画 | `src/render/animations/MatchAnimator.ts` | ✅ 骨架 |
+| 球员卡视图 | `src/render/components/CardView.ts` | ✅ fallback + 已上场状态 |
+| 球场视图 | `src/render/components/PitchView.ts` | ✅ 位置槽 + 高亮 |
+| MockAssetManager | `src/core/mocks/MockAssetManager.ts` | ✅ |
 | 平台抽象 | `src/platform/IPlatform.ts` | ✅ |
 | Web平台 | `src/platform/WebPlatform.ts` | ✅ |
 | 微信平台 | `src/platform/WxPlatform.ts` | 🔲 占位 |
