@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(dir:*)",
-      "Bash(claude --version)"
+      "Bash(claude --version)",
+      "Bash(find . -maxdepth 2 -type d ! -path */.* ! -path */node_modules ! -path */.next ! -path */dist ! -path */build)",
+      "Bash(xargs ls:*)",
+      "Bash(wc -l /g/WechatGame1/src/**/*.ts)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
