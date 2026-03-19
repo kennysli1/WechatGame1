@@ -87,7 +87,7 @@ async function main() {
       sceneManager.switchTo('stageSelect', { stages: buildStageInfoList() });
     },
     onSettings: () => {
-      console.log('[HotBall] Settings not yet implemented');
+      console.log('[KungFuFootball] Settings not yet implemented');
     },
   });
 
@@ -186,11 +186,11 @@ async function main() {
 
   await sceneManager.switchTo('menu');
 
-  console.log('[HotBall] Game initialized successfully');
+  console.log('[KungFuFootball] Game initialized successfully');
 }
 
 main().catch((err) => {
-  console.error('[HotBall] Failed to start:', err);
+  console.error('[KungFuFootball] Failed to start:', err);
   const container = document.getElementById('game-container');
   if (container) {
     container.innerHTML = `<div style="color:#e63946;padding:20px;font-family:sans-serif;">

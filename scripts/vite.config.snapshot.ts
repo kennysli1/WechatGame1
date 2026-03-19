@@ -5,8 +5,10 @@ import { readFileSync, readdirSync, statSync, renameSync, rmSync } from 'fs';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import type { Plugin } from 'vite';
 
-const OUTPUT_DIR = resolve(__dirname, '.snapshot-temp');
-const FINAL_PATH = resolve(__dirname, '热血球球_preview.html');
+// 项目根目录（本文件在 scripts/ 下）
+const ROOT = resolve(__dirname, '..');
+const OUTPUT_DIR = resolve(ROOT, '.snapshot-temp');
+const FINAL_PATH = resolve(ROOT, '功夫足球_preview.html');
 
 /**
  * 自定义 Vite 插件：构建时将 JSON 数据 + PNG 资源内联到 HTML 中，
@@ -18,7 +20,7 @@ function inlineGameData(): Plugin {
     name: 'inline-game-data',
     transformIndexHtml() {
       // 1. 内联 JSON 数据
-      const jsonDir = resolve(__dirname, 'src/core/data/generated');
+      const jsonDir = resolve(ROOT, 'src/core/data/generated');
       const jsonNames = ['cards', 'skills', 'ai_teams', 'stages', 'balance', 'asset_manifest'];
       const jsonMap: Record<string, unknown> = {};
       for (const name of jsonNames) {
@@ -27,7 +29,7 @@ function inlineGameData(): Plugin {
       }
 
       // 2. 内联图片资源为 base64 data URL
-      const assetsRoot = resolve(__dirname, 'assets');
+      const assetsRoot = resolve(ROOT, 'assets');
       const assetMap: Record<string, string> = {};
 
       function walkDir(dir: string) {
@@ -73,15 +75,16 @@ function moveToRoot(): Plugin {
       const tempFile = resolve(OUTPUT_DIR, 'index.html');
       renameSync(tempFile, FINAL_PATH);
       rmSync(OUTPUT_DIR, { recursive: true, force: true });
-      console.log(`\n  ✅ 预览文件已生成: 热血球球_preview.html\n`);
+      console.log(`\n  ✅ 预览文件已生成: 功夫足球_preview.html\n`);
     },
   };
 }
 
 export default defineConfig({
+  root: ROOT,
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(ROOT, 'src'),
     },
   },
   build: {

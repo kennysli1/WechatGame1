@@ -49,14 +49,14 @@ describe('SaveManager', () => {
     });
 
     it('handles corrupt JSON gracefully', () => {
-      platform.storageSet('hotball_save', '{not valid json!!!');
+      platform.storageSet('kungfu_football_save', '{not valid json!!!');
       mgr.load();
       expect(mgr.ownedCardIds).toEqual([]);
       expect(mgr.coins).toBe(0);
     });
 
     it('merges partial save data with defaults', () => {
-      platform.storageSet('hotball_save', JSON.stringify({ version: 1, coins: 42 }));
+      platform.storageSet('kungfu_football_save', JSON.stringify({ version: 1, coins: 42 }));
       mgr.load();
       expect(mgr.coins).toBe(42);
       expect(mgr.ownedCardIds).toEqual([]);

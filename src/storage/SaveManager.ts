@@ -8,7 +8,7 @@ interface SaveData {
   lastFormation: { cardId: string; x: number; y: number }[] | null;
 }
 
-const SAVE_KEY = 'hotball_save';
+const SAVE_KEY = 'kungfu_football_save';
 const CURRENT_VERSION = 1;
 
 function defaultSave(): SaveData {

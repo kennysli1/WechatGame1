@@ -1,7 +1,7 @@
 node_modules/
 dist/
 .snapshot-temp/
-热血球球_preview.html
+功夫足球_preview.html
 *.local
 
 # Excel temp files

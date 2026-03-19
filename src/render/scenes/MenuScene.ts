@@ -25,7 +25,7 @@ export class MenuScene implements IScene {
     this.container.addChild(panel);
 
     const title = new Text({
-      text: '热血球球',
+      text: '功夫足球',
       style: new TextStyle({
         fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
         fontSize: 48,

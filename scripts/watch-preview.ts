@@ -1,5 +1,5 @@
 /**
- * 监听 src/、assets/、data/ 目录变更，自动重新生成 热血球球_preview.html
+ * 监听 src/、assets/、data/ 目录变更，自动重新生成 功夫足球_preview.html
  * 用法：npm run preview:watch
  */
 import { watch } from 'fs';

@@ -1,5 +1,5 @@
 {
-  "name": "wechat-game1",
+  "name": "kungfu-football",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview:static": "npm run data && vite build --config vite.config.snapshot.ts",
+    "preview:static": "npm run data && vite build --config scripts/vite.config.snapshot.ts",
     "preview:watch": "tsx scripts/watch-preview.ts"
   },
   "dependencies": {
