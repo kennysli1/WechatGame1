@@ -2,27 +2,25 @@ import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { IScene } from '../SceneManager.ts';
 import { PitchView } from '../components/PitchView.ts';
 import { Panel } from '../components/Panel.ts';
-import { MatchAnimator, type AnimationStep, type Keyframe } from '../animations/MatchAnimator.ts';
+import { MatchAnimator, type AnimationStep, type Keyframe, type TipData } from '../animations/MatchAnimator.ts';
 import type { MatchResult } from '../../core/models/MatchResult.ts';
 import type { Team } from '../../core/models/Team.ts';
 
 // ---------------------------------------------------------------------------
 // 颜色常量
 // ---------------------------------------------------------------------------
-const COLOR_HOME = 0x3a86ff;
-const COLOR_AWAY = 0xff4757;
-const COLOR_BALL = 0xffd700;
-const COLOR_HIGHLIGHT = 0xffeaa7;
+const COLOR_HOME      = 0x3a86ff;
+const COLOR_AWAY      = 0xff4757;
+const COLOR_BALL      = 0xffd700;
 const COLOR_GOAL_FLASH = 0xffd700;
 
 // ---------------------------------------------------------------------------
-// 内插函数（多段贝塞尔线性插值）
+// 内插函数（多段线性插值）
 // ---------------------------------------------------------------------------
 function lerpKeyframes(keyframes: Keyframe[], t: number): { x: number; y: number } {
   if (keyframes.length === 0) return { x: 0.5, y: 0.5 };
   if (keyframes.length === 1) return { x: keyframes[0].x, y: keyframes[0].y };
 
-  // 找到 t 所在的分段
   for (let i = 0; i < keyframes.length - 1; i++) {
     const k0 = keyframes[i];
     const k1 = keyframes[i + 1];
@@ -84,6 +82,24 @@ export class MatchScene implements IScene {
   // 尺寸
   private readonly W: number;
   private readonly H: number;
+  private readonly pitchX: number;
+  private readonly pitchY: number;
+
+  // ── 跳过按钮 ──────────────────────────────────────────────────────────────
+  private skipBtn: Container;
+
+  // ── Tips 弹窗 ──────────────────────────────────────────────────────────────
+  private tipContainer: Container;
+  private tipBg: Graphics;
+  private tipIconText: Text;
+  private tipLabelText: Text;
+  private tipRateBar: Graphics;
+  private tipRateText: Text;
+  private tipSkillNameText: Text;
+  private tipAlpha = 0;
+  private tipFadeTarget = 0;
+  private tipStepDuration = 1000;
+  private tipElapsed = 0;
 
   constructor(opts: { width: number; height: number; onMatchEnd: (r: MatchResult) => void }) {
     this.W = opts.width;
@@ -125,16 +141,16 @@ export class MatchScene implements IScene {
     this.minuteText.position.set(opts.width / 2, 44);
     this.container.addChild(this.minuteText);
 
-    // 球场
-    this.pitch = new PitchView();
-    const pitchX = (opts.width - this.pitch.pitchWidth) / 2;
-    const pitchY = 58;
-    this.pitch.position.set(pitchX, pitchY);
+    // 2.5D 斜视角球场（isometric = true）
+    this.pitch = new PitchView(700, 420, true);
+    this.pitchX = (opts.width - this.pitch.pitchWidth) / 2;
+    this.pitchY = 58;
+    this.pitch.position.set(this.pitchX, this.pitchY);
     this.container.addChild(this.pitch);
 
     // 球场内动画层
     this.pitchLayer = new Container();
-    this.pitchLayer.position.set(pitchX, pitchY);
+    this.pitchLayer.position.set(this.pitchX, this.pitchY);
     this.container.addChild(this.pitchLayer);
 
     // 进球闪光全屏覆盖层
@@ -166,8 +182,9 @@ export class MatchScene implements IScene {
     this.pitchLayer.addChild(this.ballDot);
     this.drawBall();
 
-    // 底部事件文字
-    const eventBgY = pitchY + this.pitch.pitchHeight + 8;
+    // 底部事件文字（位置紧贴等效球场高度下方）
+    const effectivePitchBottom = this.pitchY + this.pitch.effectiveHeight;
+    const eventBgY = effectivePitchBottom + 8;
     this.eventBg = new Graphics();
     this.eventBg.roundRect(20, eventBgY, opts.width - 40, 52, 10);
     this.eventBg.fill({ color: 0x16213e, alpha: 0.85 });
@@ -187,6 +204,111 @@ export class MatchScene implements IScene {
     this.eventText.anchor.set(0.5, 0.5);
     this.eventText.position.set(opts.width / 2, eventBgY + 26);
     this.container.addChild(this.eventText);
+
+    // ── 跳过按钮（右下角）──────────────────────────────────────────────────
+    this.skipBtn = this.buildSkipButton();
+    this.container.addChild(this.skipBtn);
+
+    // ── Tips 弹窗层（球员 / 球之上）────────────────────────────────────────
+    this.tipContainer = new Container();
+    this.tipContainer.alpha = 0;
+
+    this.tipBg = new Graphics();
+    this.tipContainer.addChild(this.tipBg);
+
+    this.tipIconText = new Text({
+      text: '',
+      style: new TextStyle({
+        fontFamily: 'Arial, sans-serif',
+        fontSize: 22,
+      }),
+    });
+    this.tipIconText.position.set(10, 8);
+    this.tipContainer.addChild(this.tipIconText);
+
+    this.tipLabelText = new Text({
+      text: '',
+      style: new TextStyle({
+        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontSize: 13,
+        fontWeight: 'bold',
+        fill: 0xdde3ed,
+      }),
+    });
+    this.tipLabelText.position.set(38, 10);
+    this.tipContainer.addChild(this.tipLabelText);
+
+    this.tipRateBar = new Graphics();
+    this.tipRateBar.position.set(10, 36);
+    this.tipContainer.addChild(this.tipRateBar);
+
+    this.tipRateText = new Text({
+      text: '',
+      style: new TextStyle({
+        fontFamily: 'Arial, sans-serif',
+        fontSize: 13,
+        fontWeight: 'bold',
+        fill: 0xffffff,
+      }),
+    });
+    this.tipRateText.position.set(10, 56);
+    this.tipContainer.addChild(this.tipRateText);
+
+    this.tipSkillNameText = new Text({
+      text: '',
+      style: new TextStyle({
+        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontSize: 15,
+        fontWeight: 'bold',
+        fill: 0xffe680,
+        dropShadow: { color: 0x000000, blur: 3, distance: 1, angle: Math.PI / 4 },
+      }),
+    });
+    this.tipSkillNameText.anchor.set(0.5, 0);
+    this.tipContainer.addChild(this.tipSkillNameText);
+
+    this.container.addChild(this.tipContainer);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 跳过按钮构建
+  // ---------------------------------------------------------------------------
+
+  private buildSkipButton(): Container {
+    const btn = new Container();
+    const BW = 90, BH = 32;
+    const bx = this.W - BW - 14;
+    const by = this.H - BH - 14;
+
+    const bg = new Graphics();
+    bg.roundRect(0, 0, BW, BH, 8);
+    bg.fill({ color: 0x16213e, alpha: 0.88 });
+    bg.roundRect(0, 0, BW, BH, 8);
+    bg.stroke({ color: 0x4a9eff, width: 1.5 });
+    btn.addChild(bg);
+
+    const label = new Text({
+      text: '跳过 ›',
+      style: new TextStyle({
+        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontSize: 15,
+        fontWeight: 'bold',
+        fill: 0x7ec8ff,
+      }),
+    });
+    label.anchor.set(0.5);
+    label.position.set(BW / 2, BH / 2);
+    btn.addChild(label);
+
+    btn.position.set(bx, by);
+    btn.eventMode = 'static';
+    btn.cursor = 'pointer';
+
+    btn.on('pointerdown', () => this.skipToEnd());
+    btn.on('pointerover', () => { bg.tint = 0xaaddff; });
+    btn.on('pointerout',  () => { bg.tint = 0xffffff; });
+
+    return btn;
   }
 
   // ---------------------------------------------------------------------------
@@ -212,13 +334,18 @@ export class MatchScene implements IScene {
     this.goalLabel.alpha = 0;
     this.goalFlashTimer = 0;
 
+    // 隐藏 tip
+    this.tipContainer.alpha = 0;
+    this.tipAlpha = 0;
+    this.tipFadeTarget = 0;
+
     const animator = new MatchAnimator();
     this.timeline = animator.buildTimeline(d.result.events, d.homeTeam, d.awayTeam);
     this.stepIndex = 0;
     this.elapsed = 0;
     this.playing = true;
 
-    // 初始化球员点（用 homeTeam/awayTeam 如果有；否则用 result 的名字作占位）
+    // 初始化球员点
     this.playerDots.forEach((dot) => this.pitchLayer.removeChild(dot));
     this.playerDots.clear();
 
@@ -249,6 +376,9 @@ export class MatchScene implements IScene {
       this.goalLabel.alpha = Math.max(0, 1 - progress * 1.6);
     }
 
+    // Tips 透明度平滑插值
+    this.updateTipFade(dt * 16.67);
+
     if (this.stepIndex >= this.timeline.length) {
       this.playing = false;
       this.onMatchEnd(this.result);
@@ -268,6 +398,11 @@ export class MatchScene implements IScene {
 
     // 高亮球员
     this.updatePlayerHighlights(step.highlightPlayers);
+
+    // 控制 tip 淡出时机（步骤剩余时间 < 25% 开始淡出）
+    if (step.tip && this.elapsed / step.durationMs > 0.75) {
+      this.tipFadeTarget = 0;
+    }
 
     if (this.elapsed >= step.durationMs) {
       this.elapsed = 0;
@@ -292,12 +427,30 @@ export class MatchScene implements IScene {
       }
 
       this.stepIndex++;
+
+      // 下一步骤开始时展示 tip
+      if (this.stepIndex < this.timeline.length) {
+        const nextStep = this.timeline[this.stepIndex];
+        if (nextStep.tip) {
+          this.showTipForStep(nextStep);
+        } else {
+          this.tipFadeTarget = 0;
+        }
+      }
     }
   }
 
   // ---------------------------------------------------------------------------
   // 私有辅助方法
   // ---------------------------------------------------------------------------
+
+  private skipToEnd(): void {
+    if (!this.result) return;
+    this.playing = false;
+    this.tipFadeTarget = 0;
+    this.tipContainer.alpha = 0;
+    this.onMatchEnd(this.result);
+  }
 
   private spawnTeamDots(team: Team, color: number, mirror: boolean): void {
     for (const slot of team.formation) {
@@ -311,7 +464,10 @@ export class MatchScene implements IScene {
       dot.stroke({ color: 0xffffff, width: 2 });
       dot.position.set(px.x, px.y);
 
-      // 球员名字标签
+      // 深度缩放：远端球员略小
+      const depthScale = 0.78 + 0.22 * ny;
+      dot.scale.set(depthScale);
+
       const label = new Text({
         text: slot.card.name.slice(0, 2),
         style: new TextStyle({
@@ -331,11 +487,9 @@ export class MatchScene implements IScene {
 
   private drawBall(): void {
     this.ballDot.clear();
-    // 外圈
     this.ballDot.circle(0, 0, 8);
     this.ballDot.fill({ color: COLOR_BALL });
     this.ballDot.stroke({ color: 0x333333, width: 2 });
-    // 中心点
     this.ballDot.circle(0, 0, 3);
     this.ballDot.fill({ color: 0x333333 });
   }
@@ -359,7 +513,6 @@ export class MatchScene implements IScene {
   }
 
   private triggerGoalEffect(scorerId: string, description: string): void {
-    // 判断进球方：scorer 在 homePlayerIds 中则主队得分，否则客队得分
     if (this.homePlayerIds.size > 0) {
       if (this.homePlayerIds.has(scorerId)) {
         this.homeScore++;
@@ -367,7 +520,6 @@ export class MatchScene implements IScene {
         this.awayScore++;
       }
     } else {
-      // 无队伍信息时，按最终比分比例分配（降级策略）
       const finalHome = this.result?.homeGoals ?? 0;
       const finalAway = this.result?.awayGoals ?? 0;
       const totalGoals = this.homeScore + this.awayScore + 1;
@@ -384,5 +536,100 @@ export class MatchScene implements IScene {
     this.goalFlash.alpha = 0.55;
     this.goalLabel.text = description;
     this.goalLabel.alpha = 1;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tips 弹窗
+  // ---------------------------------------------------------------------------
+
+  private showTipForStep(step: AnimationStep): void {
+    const tip = step.tip;
+    if (!tip) return;
+
+    this.tipStepDuration = step.durationMs;
+    this.tipElapsed = 0;
+    this.tipFadeTarget = 1;
+
+    // 计算 tip 弹窗位置（基于球的起始位置）
+    const startKf = step.ballKeyframes[0] ?? { x: 0.5, y: 0.5 };
+    const ballPx = this.pitch.normalizedToPixel(startKf.x, startKf.y);
+    const screenBallX = this.pitchX + ballPx.x;
+    const screenBallY = this.pitchY + ballPx.y;
+
+    const TIP_W = tip.type === 'skill' ? 168 : 158;
+    const TIP_H = tip.type === 'skill' ? 72 : 80;
+
+    // 优先显示在球的右上方，防止越界则自动调整
+    let tx = screenBallX + 18;
+    let ty = screenBallY - TIP_H - 14;
+    tx = Math.max(8, Math.min(this.W - TIP_W - 8, tx));
+    ty = Math.max(56, Math.min(this.H - TIP_H - 8, ty));
+
+    this.tipContainer.position.set(tx, ty);
+    this.buildTipContent(tip, TIP_W, TIP_H);
+  }
+
+  private buildTipContent(tip: TipData, w: number, h: number): void {
+    // 背景
+    this.tipBg.clear();
+    this.tipBg.roundRect(0, 0, w, h, 10);
+    this.tipBg.fill({ color: 0x0d1b3e, alpha: 0.92 });
+    this.tipBg.roundRect(0, 0, w, h, 10);
+    if (tip.type === 'skill') {
+      this.tipBg.stroke({ color: 0xffe246, width: 2 });
+    } else {
+      const borderColor = tip.success ? 0x44cc88 : 0xff6655;
+      this.tipBg.stroke({ color: borderColor, width: 1.5 });
+    }
+
+    // 图标
+    this.tipIconText.text = tip.icon;
+    this.tipIconText.visible = true;
+
+    // 主标签
+    this.tipLabelText.text = tip.label;
+    this.tipLabelText.visible = true;
+
+    if (tip.type === 'rate' && tip.rate !== undefined) {
+      // 成功率进度条
+      const barW = w - 20;
+      const rate = tip.rate;
+      const barColor = rate >= 0.55 ? 0x44cc88 : rate >= 0.35 ? 0xf0b040 : 0xff5555;
+
+      this.tipRateBar.clear();
+      // 底条
+      this.tipRateBar.roundRect(0, 0, barW, 10, 5);
+      this.tipRateBar.fill({ color: 0x334466 });
+      // 填充条
+      this.tipRateBar.roundRect(0, 0, Math.max(4, barW * rate), 10, 5);
+      this.tipRateBar.fill({ color: barColor });
+      this.tipRateBar.visible = true;
+
+      this.tipRateText.text = `${Math.round(rate * 100)}%`;
+      this.tipRateText.style.fill = barColor;
+      this.tipRateText.visible = true;
+      this.tipRateText.position.set(w - 42, 56);
+
+      this.tipSkillNameText.visible = false;
+    } else if (tip.type === 'skill') {
+      // 技能名称居中展示
+      this.tipSkillNameText.text = tip.label;
+      this.tipSkillNameText.position.set(w / 2, 34);
+      this.tipSkillNameText.visible = true;
+
+      this.tipRateBar.clear();
+      this.tipRateBar.visible = false;
+      this.tipRateText.visible = false;
+    }
+  }
+
+  private updateTipFade(dtMs: number): void {
+    const FADE_SPEED = 0.006; // per ms → 0 to 1 in ~166ms
+    if (this.tipFadeTarget > this.tipAlpha) {
+      this.tipAlpha = Math.min(this.tipFadeTarget, this.tipAlpha + dtMs * FADE_SPEED);
+    } else if (this.tipFadeTarget < this.tipAlpha) {
+      this.tipAlpha = Math.max(this.tipFadeTarget, this.tipAlpha - dtMs * FADE_SPEED);
+    }
+    this.tipContainer.alpha = this.tipAlpha;
   }
 }

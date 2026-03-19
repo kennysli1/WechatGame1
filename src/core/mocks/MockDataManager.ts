@@ -12,14 +12,14 @@ import type {
 // ---------------------------------------------------------------------------
 
 const CARDS: CardDef[] = [
-  { id: 'gk_001', name: '李守门', position: 'GK',  star: 3, attack: 20, defense: 85, speed: 50, technique: 55, skill1: 'skill_save',    skill2: '',              artAsset: 'card_gk_001', description: '稳健守门员' },
-  { id: 'df_001', name: '张铁壁', position: 'DEF', star: 3, attack: 35, defense: 80, speed: 55, technique: 50, skill1: 'skill_tackle',  skill2: '',              artAsset: 'card_df_001', description: '坚固后卫' },
-  { id: 'df_002', name: '王坚盾', position: 'DEF', star: 2, attack: 30, defense: 75, speed: 60, technique: 45, skill1: 'skill_tackle',  skill2: '',              artAsset: 'card_df_002', description: '快速后卫' },
-  { id: 'mf_001', name: '陈中场', position: 'MID', star: 3, attack: 60, defense: 60, speed: 70, technique: 75, skill1: 'skill_through', skill2: '',              artAsset: 'card_mf_001', description: '全能中场' },
-  { id: 'mf_002', name: '刘组织', position: 'MID', star: 4, attack: 55, defense: 55, speed: 65, technique: 85, skill1: 'skill_through', skill2: 'skill_freekick', artAsset: 'card_mf_002', description: '组织核心' },
-  { id: 'fw_001', name: '赵射手', position: 'FWD', star: 4, attack: 88, defense: 25, speed: 80, technique: 78, skill1: 'skill_shot',    skill2: 'skill_dribble', artAsset: 'card_fw_001', description: '锋线杀手' },
-  { id: 'fw_002', name: '孙飞翼', position: 'FWD', star: 3, attack: 75, defense: 30, speed: 90, technique: 70, skill1: 'skill_dribble', skill2: '',              artAsset: 'card_fw_002', description: '极速边锋' },
-  { id: 'fw_003', name: '周重炮', position: 'FWD', star: 5, attack: 95, defense: 20, speed: 70, technique: 88, skill1: 'skill_shot',    skill2: 'skill_freekick', artAsset: 'card_fw_003', description: '传奇射手' },
+  { id: 'gk_001', name: '李守门', position: 'GK',  star: 3, attack: 20, defense: 85, speed: 50, technique: 55, skill1: 'skill_save',    skill2: '',              artAsset: 'card_gk_001', description: '稳健守门员', dribble: 20, passing: 30, shooting: 10, tackling: 30, intercept: 25, blocking: 65, goalkeeping: 85 },
+  { id: 'df_001', name: '张铁壁', position: 'DEF', star: 3, attack: 35, defense: 80, speed: 55, technique: 50, skill1: 'skill_tackle',  skill2: '',              artAsset: 'card_df_001', description: '坚固后卫',   dribble: 35, passing: 40, shooting: 30, tackling: 80, intercept: 75, blocking: 78, goalkeeping: 0  },
+  { id: 'df_002', name: '王坚盾', position: 'DEF', star: 2, attack: 30, defense: 75, speed: 60, technique: 45, skill1: 'skill_tackle',  skill2: '',              artAsset: 'card_df_002', description: '快速后卫',   dribble: 40, passing: 45, shooting: 28, tackling: 70, intercept: 72, blocking: 65, goalkeeping: 0  },
+  { id: 'mf_001', name: '陈中场', position: 'MID', star: 3, attack: 60, defense: 60, speed: 70, technique: 75, skill1: 'skill_through', skill2: '',              artAsset: 'card_mf_001', description: '全能中场',   dribble: 65, passing: 72, shooting: 55, tackling: 60, intercept: 55, blocking: 40, goalkeeping: 0  },
+  { id: 'mf_002', name: '刘组织', position: 'MID', star: 4, attack: 55, defense: 55, speed: 65, technique: 85, skill1: 'skill_through', skill2: 'skill_freekick', artAsset: 'card_mf_002', description: '组织核心',   dribble: 60, passing: 85, shooting: 50, tackling: 55, intercept: 60, blocking: 38, goalkeeping: 0  },
+  { id: 'fw_001', name: '赵射手', position: 'FWD', star: 4, attack: 88, defense: 25, speed: 80, technique: 78, skill1: 'skill_shot',    skill2: 'skill_dribble', artAsset: 'card_fw_001', description: '锋线杀手',   dribble: 78, passing: 60, shooting: 88, tackling: 25, intercept: 20, blocking: 18, goalkeeping: 0  },
+  { id: 'fw_002', name: '孙飞翼', position: 'FWD', star: 3, attack: 75, defense: 30, speed: 90, technique: 70, skill1: 'skill_dribble', skill2: '',              artAsset: 'card_fw_002', description: '极速边锋',   dribble: 85, passing: 55, shooting: 72, tackling: 22, intercept: 18, blocking: 15, goalkeeping: 0  },
+  { id: 'fw_003', name: '周重炮', position: 'FWD', star: 5, attack: 95, defense: 20, speed: 70, technique: 88, skill1: 'skill_shot',    skill2: 'skill_freekick', artAsset: 'card_fw_003', description: '传奇射手',   dribble: 75, passing: 65, shooting: 95, tackling: 20, intercept: 18, blocking: 14, goalkeeping: 0  },
 ];
 
 const SKILLS: SkillDef[] = [

@@ -6,6 +6,7 @@ interface SaveData {
   completedStageIds: string[];
   coins: number;
   lastFormation: { cardId: string; x: number; y: number }[] | null;
+  selectedFormationId: string;
 }
 
 const SAVE_KEY = 'kungfu_football_save';
@@ -18,6 +19,7 @@ function defaultSave(): SaveData {
     completedStageIds: [],
     coins: 0,
     lastFormation: null,
+    selectedFormationId: 'f_2_2_2',
   };
 }
 
@@ -89,6 +91,15 @@ export class SaveManager {
 
   setLastFormation(formation: { cardId: string; x: number; y: number }[]): void {
     this.data.lastFormation = formation;
+    this.save();
+  }
+
+  get selectedFormationId(): string {
+    return this.data.selectedFormationId ?? 'f_2_2_2';
+  }
+
+  setSelectedFormationId(id: string): void {
+    this.data.selectedFormationId = id;
     this.save();
   }
 }

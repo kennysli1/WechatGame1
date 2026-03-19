@@ -7,16 +7,19 @@ export class MenuScene implements IScene {
   readonly name = 'menu';
   readonly container = new Container();
   private onStartGame: () => void;
-  private onSettings: () => void;
+  private onClub: () => void;
+  private onRecruit: () => void;
 
   constructor(opts: {
     width: number;
     height: number;
     onStartGame: () => void;
-    onSettings?: () => void;
+    onClub?: () => void;
+    onRecruit?: () => void;
   }) {
     this.onStartGame = opts.onStartGame;
-    this.onSettings = opts.onSettings ?? (() => {});
+    this.onClub      = opts.onClub    ?? (() => {});
+    this.onRecruit   = opts.onRecruit ?? (() => {});
     this.build(opts.width, opts.height);
   }
 
@@ -55,28 +58,50 @@ export class MenuScene implements IScene {
     subtitle.position.set(w / 2, h * 0.28 + 48);
     this.container.addChild(subtitle);
 
+    // ── Three main buttons ────────────────────────────────────────────────────
+    const BTN_W = 200;
+    const BTN_H = 52;
+    const BTN_GAP = 18;
+    const totalH = BTN_H * 3 + BTN_GAP * 2;
+    const startY = h * 0.52;
+
     const startBtn = new Button({
-      label: '开始比赛',
-      width: 220,
-      height: 56,
+      label: '开始游戏',
+      width: BTN_W,
+      height: BTN_H,
       color: 0x2d6a4f,
       hoverColor: 0x40916c,
+      fontSize: 20,
       onClick: () => this.onStartGame(),
     });
-    startBtn.position.set(w / 2 - 110, h * 0.55);
+    startBtn.position.set(w / 2 - BTN_W / 2, startY);
     this.container.addChild(startBtn);
 
-    const settingsBtn = new Button({
-      label: '设置',
-      width: 160,
-      height: 44,
-      color: 0x495057,
-      hoverColor: 0x6c757d,
-      fontSize: 18,
-      onClick: () => this.onSettings(),
+    const clubBtn = new Button({
+      label: '俱乐部',
+      width: BTN_W,
+      height: BTN_H,
+      color: 0x1d3557,
+      hoverColor: 0x2a4d7a,
+      fontSize: 20,
+      onClick: () => this.onClub(),
     });
-    settingsBtn.position.set(w / 2 - 80, h * 0.55 + 76);
-    this.container.addChild(settingsBtn);
+    clubBtn.position.set(w / 2 - BTN_W / 2, startY + BTN_H + BTN_GAP);
+    this.container.addChild(clubBtn);
+
+    const recruitBtn = new Button({
+      label: '招募',
+      width: BTN_W,
+      height: BTN_H,
+      color: 0x6d3b47,
+      hoverColor: 0x8b4d5e,
+      fontSize: 20,
+      onClick: () => this.onRecruit(),
+    });
+    recruitBtn.position.set(w / 2 - BTN_W / 2, startY + (BTN_H + BTN_GAP) * 2);
+    this.container.addChild(recruitBtn);
+
+    void totalH;
   }
 
   onEnter(): void {

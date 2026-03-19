@@ -16,6 +16,33 @@ export interface CardDef {
   skill2: string;
   artAsset: string;
   description: string;
+  // ── 新增球员属性（UI 展示用） ──────────────────────────────────────────
+  dribble: number;      // 带球
+  passing: number;      // 传球
+  shooting: number;     // 射门
+  tackling: number;     // 抢断
+  intercept: number;    // 拦截
+  blocking: number;     // 封堵
+  goalkeeping: number;  // 守门（门将专属有意义值，其余为 0）
+}
+
+/** 球场位置槽定义（归一化坐标 0-1） */
+export interface SlotDef {
+  id: string;
+  label: string;
+  position: Position;
+  nx: number;
+  ny: number;
+}
+
+/** 阵型配置 */
+export interface FormationConfig {
+  id: string;
+  name: string;   // 显示名，如 "2-2-2"
+  def: number;    // 后卫数
+  mid: number;    // 中场数
+  fwd: number;    // 前锋数（def + mid + fwd 必须 = 6）
+  slots: SlotDef[];
 }
 
 export interface SkillDef {

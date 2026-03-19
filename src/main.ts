@@ -5,6 +5,7 @@ import { SceneManager } from './render/SceneManager.ts';
 import { MenuScene } from './render/scenes/MenuScene.ts';
 import { StageSelectScene, type StageInfo } from './render/scenes/StageSelectScene.ts';
 import { FormationScene } from './render/scenes/FormationScene.ts';
+import { ClubScene } from './render/scenes/ClubScene.ts';
 import { MatchScene } from './render/scenes/MatchScene.ts';
 import { ResultScene, type ResultSceneData } from './render/scenes/ResultScene.ts';
 import { MatchEngine } from './core/systems/MatchEngine.ts';
@@ -13,24 +14,24 @@ import { WebPlatform } from './platform/WebPlatform.ts';
 import { SaveManager } from './storage/SaveManager.ts';
 import type { Team, TeamSlot } from './core/models/Team.ts';
 
-const GAME_WIDTH = 960;
+const GAME_WIDTH  = 960;
 const GAME_HEIGHT = 640;
 
 async function main() {
   const app = new Application();
   await app.init({
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT,
+    width:           GAME_WIDTH,
+    height:          GAME_HEIGHT,
     backgroundColor: 0x1a1a2e,
-    antialias: true,
-    resolution: window.devicePixelRatio || 1,
-    autoDensity: true,
+    antialias:       true,
+    resolution:      window.devicePixelRatio || 1,
+    autoDensity:     true,
   });
 
   const container = document.getElementById('game-container')!;
   container.appendChild(app.canvas);
 
-  const platform = new WebPlatform();
+  const platform    = new WebPlatform();
   const saveManager = new SaveManager(platform);
   saveManager.load();
 
@@ -41,34 +42,35 @@ async function main() {
   assetManager.setRenderer(app.renderer);
 
   const matchEngine = new MatchEngine(dataManager);
-  const aiOpponent = new AIOpponent(dataManager);
+  const aiOpponent  = new AIOpponent(dataManager);
 
   const sceneManager = new SceneManager(app);
 
   let currentStageId: string | null = null;
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
   function buildStageInfoList(): StageInfo[] {
-    const stages = dataManager.getAllStages();
+    const stages    = dataManager.getAllStages();
     const completed = saveManager.completedStageIds;
     return stages.map((stage) => {
-      const aiTeam = dataManager.getAITeam(stage.aiTeamId);
-      const unlocked =
-        !stage.unlockAfterStage || completed.includes(stage.unlockAfterStage);
+      const aiTeam   = dataManager.getAITeam(stage.aiTeamId);
+      const unlocked = !stage.unlockAfterStage || completed.includes(stage.unlockAfterStage);
       return {
-        stageId: stage.stageId,
-        name: stage.name,
-        description: stage.description,
-        rewardCoins: stage.rewardCoins,
-        difficulty: aiTeam.difficulty,
+        stageId:      stage.stageId,
+        name:         stage.name,
+        description:  stage.description,
+        rewardCoins:  stage.rewardCoins,
+        difficulty:   aiTeam.difficulty,
         unlocked,
-        completed: completed.includes(stage.stageId),
+        completed:    completed.includes(stage.stageId),
       };
     });
   }
 
   function findNextStageId(afterStageId: string): string | null {
     const stages = dataManager.getAllStages();
-    const next = stages.find((s) => s.unlockAfterStage === afterStageId);
+    const next   = stages.find((s) => s.unlockAfterStage === afterStageId);
     return next?.stageId ?? null;
   }
 
@@ -80,32 +82,88 @@ async function main() {
     return names;
   }
 
+  /**
+   * Build a Team from the ClubScene-saved lineup.
+   * Falls back to FormationScene slots if ClubScene has nothing,
+   * and finally to all-cards default lineup.
+   */
+  function buildPlayerTeam(clubSlots?: TeamSlot[]): Team {
+    // Prefer ClubScene's saved slots
+    if (clubSlots && clubSlots.length === 7) {
+      return { name: '我的球队', formation: clubSlots };
+    }
+
+    // Try saved lineup from SaveManager
+    const saved = saveManager.lastFormation;
+    if (saved && saved.length === 7) {
+      const slots: TeamSlot[] = saved.flatMap((sf) => {
+        try {
+          const card = dataManager.getCard(sf.cardId);
+          return [{ card, x: sf.x, y: sf.y }];
+        } catch {
+          return [];
+        }
+      });
+      if (slots.length === 7) {
+        return { name: '我的球队', formation: slots };
+      }
+    }
+
+    // Default: use all cards in default positions
+    const allCards = dataManager.getAllCards();
+    const defSlots: TeamSlot[] = [
+      { card: allCards.find((c) => c.position === 'GK')  ?? allCards[0], x: 0.07, y: 0.50 },
+      { card: allCards.filter((c) => c.position === 'DEF')[0] ?? allCards[1], x: 0.22, y: 0.28 },
+      { card: allCards.filter((c) => c.position === 'DEF')[1] ?? allCards[2], x: 0.22, y: 0.72 },
+      { card: allCards.filter((c) => c.position === 'MID')[0] ?? allCards[3], x: 0.45, y: 0.28 },
+      { card: allCards.filter((c) => c.position === 'MID')[1] ?? allCards[4], x: 0.45, y: 0.72 },
+      { card: allCards.filter((c) => c.position === 'FWD')[0] ?? allCards[5], x: 0.68, y: 0.33 },
+      { card: allCards.filter((c) => c.position === 'FWD')[1] ?? allCards[6], x: 0.68, y: 0.67 },
+    ];
+    return { name: '我的球队', formation: defSlots };
+  }
+
+  // ── Scenes ────────────────────────────────────────────────────────────────
+
   const menuScene = new MenuScene({
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT,
+    width:       GAME_WIDTH,
+    height:      GAME_HEIGHT,
     onStartGame: () => {
       sceneManager.switchTo('stageSelect', { stages: buildStageInfoList() });
     },
-    onSettings: () => {
-      console.log('[KungFuFootball] Settings not yet implemented');
+    onClub: () => {
+      sceneManager.switchTo('club');
+    },
+    onRecruit: () => {
+      console.log('[KungFuFootball] 招募功能即将上线');
     },
   });
 
   const stageSelectScene = new StageSelectScene({
-    width: GAME_WIDTH,
+    width:  GAME_WIDTH,
     height: GAME_HEIGHT,
     onSelectStage: (stageId: string) => {
       currentStageId = stageId;
-      const allCards = dataManager.getAllCards();
-      sceneManager.switchTo('formation', { cards: allCards });
+      // Use ClubScene's saved lineup directly — skip FormationScene
+      const playerTeam = buildPlayerTeam(clubScene.getFormationSlots());
+      const aiTeam = aiOpponent.generateTeam(stageId);
+      const result = matchEngine.simulate(playerTeam, aiTeam);
+      sceneManager.switchTo('match', { result, homeTeam: playerTeam, awayTeam: aiTeam });
     },
     onBack: () => {
       sceneManager.switchTo('menu');
     },
   });
 
+  const clubScene = new ClubScene({
+    dataManager,
+    saveManager,
+    onBack: () => sceneManager.switchTo('menu'),
+  });
+
+  // FormationScene kept for standalone debug access (not in main game flow)
   const formationScene = new FormationScene({
-    width: GAME_WIDTH,
+    width:  GAME_WIDTH,
     height: GAME_HEIGHT,
     onConfirm: (slots: TeamSlot[]) => {
       const playerTeam: Team = { name: '我的球队', formation: slots };
@@ -120,10 +178,10 @@ async function main() {
   });
 
   const matchScene = new MatchScene({
-    width: GAME_WIDTH,
+    width:  GAME_WIDTH,
     height: GAME_HEIGHT,
     onMatchEnd: (matchResult) => {
-      const won = matchResult.homeGoals > matchResult.awayGoals;
+      const won       = matchResult.homeGoals > matchResult.awayGoals;
       let rewards: ResultSceneData['rewards'];
       let hasNextStage = false;
 
@@ -145,17 +203,17 @@ async function main() {
               rewardCardName = stage.rewardCardId;
             }
           }
-          rewards = { coins: stage.rewardCoins, cardName: rewardCardName };
+          rewards      = { coins: stage.rewardCoins, cardName: rewardCardName };
           hasNextStage = findNextStageId(currentStageId) !== null;
         }
       }
 
       const resultData: ResultSceneData = {
-        result: matchResult,
-        stageId: currentStageId ?? undefined,
+        result:       matchResult,
+        stageId:      currentStageId ?? undefined,
         rewards,
         hasNextStage,
-        cardNames: buildCardNamesMap(),
+        cardNames:    buildCardNamesMap(),
       };
 
       sceneManager.switchTo('result', resultData);
@@ -163,7 +221,7 @@ async function main() {
   });
 
   const resultScene = new ResultScene({
-    width: GAME_WIDTH,
+    width:  GAME_WIDTH,
     height: GAME_HEIGHT,
     onBack: () => {
       currentStageId = null;
@@ -174,8 +232,11 @@ async function main() {
     },
   });
 
+  // ── Register & launch ─────────────────────────────────────────────────────
+
   sceneManager.register(menuScene);
   sceneManager.register(stageSelectScene);
+  sceneManager.register(clubScene);
   sceneManager.register(formationScene);
   sceneManager.register(matchScene);
   sceneManager.register(resultScene);

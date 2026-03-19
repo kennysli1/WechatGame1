@@ -23,14 +23,18 @@ export class CardView extends Container {
   private bg: Graphics;
   private overlay: Graphics;
 
-  constructor(def: CardDef) {
+  constructor(def: CardDef, clubMode = false) {
     super();
     this.cardDef = def;
 
     this.bg = new Graphics();
     this.addChild(this.bg);
 
-    this.buildFallback();
+    if (clubMode) {
+      this.buildClubCard();
+    } else {
+      this.buildFallback();
+    }
 
     this.overlay = new Graphics();
     this.overlay.visible = false;
@@ -127,6 +131,124 @@ export class CardView extends Container {
       val.position.set(x + 18, y);
       this.addChild(val);
     });
+  }
+
+  /** 俱乐部模式：展示球员专项数值 */
+  private buildClubCard(): void {
+    const col = POSITION_COLORS[this.cardDef.position];
+
+    this.bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
+    this.bg.fill({ color: col });
+    this.bg.roundRect(0, 0, CARD_WIDTH, 28, 10);
+    this.bg.fill({ color: 0x000000, alpha: 0.30 });
+    this.bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
+    this.bg.stroke({ color: 0xffffff, width: 2 });
+
+    // ── Stars ──
+    const stars = '★'.repeat(this.cardDef.star) + '☆'.repeat(5 - this.cardDef.star);
+    const starText = new Text({
+      text: stars,
+      style: new TextStyle({ fontSize: 11, fill: 0xffd700, fontFamily: 'Arial' }),
+    });
+    starText.anchor.set(0.5, 0);
+    starText.position.set(CARD_WIDTH / 2, 4);
+    this.addChild(starText);
+
+    // ── Position badge ──
+    const badge = new Graphics();
+    badge.roundRect(4, 30, 38, 16, 4);
+    badge.fill({ color: 0x000000, alpha: 0.35 });
+    this.addChild(badge);
+    const posText = new Text({
+      text: POSITION_LABELS[this.cardDef.position],
+      style: new TextStyle({ fontSize: 9, fill: 0xffffff, fontFamily: 'Arial, "Microsoft YaHei", sans-serif' }),
+    });
+    posText.anchor.set(0, 0);
+    posText.position.set(7, 32);
+    this.addChild(posText);
+
+    // ── Player name ──
+    const nameText = new Text({
+      text: this.cardDef.name,
+      style: new TextStyle({
+        fontSize: 16,
+        fontWeight: 'bold',
+        fill: 0xffffff,
+        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        align: 'center',
+      }),
+    });
+    nameText.anchor.set(0.5);
+    nameText.position.set(CARD_WIDTH / 2, CARD_HEIGHT * 0.38);
+    this.addChild(nameText);
+
+    // ── Specialized stats ──
+    const statBg = new Graphics();
+    statBg.roundRect(4, CARD_HEIGHT * 0.56, CARD_WIDTH - 8, CARD_HEIGHT * 0.40, 6);
+    statBg.fill({ color: 0x000000, alpha: 0.22 });
+    this.addChild(statBg);
+
+    const stats = this.getClubStats();
+    stats.forEach((s, i) => {
+      const y = CARD_HEIGHT * 0.59 + i * 20;
+
+      const lbl = new Text({
+        text: s.label,
+        style: new TextStyle({ fontSize: 10, fill: s.color, fontFamily: 'Arial, "Microsoft YaHei"' }),
+      });
+      lbl.position.set(8, y);
+      this.addChild(lbl);
+
+      // Value bar background
+      const barBg = new Graphics();
+      barBg.rect(44, y + 2, 64, 10);
+      barBg.fill({ color: 0x000000, alpha: 0.30 });
+      this.addChild(barBg);
+
+      // Value bar fill
+      const barFill = new Graphics();
+      barFill.rect(44, y + 2, Math.round((s.value / 100) * 64), 10);
+      barFill.fill({ color: s.color, alpha: 0.85 });
+      this.addChild(barFill);
+
+      const val = new Text({
+        text: String(s.value),
+        style: new TextStyle({ fontSize: 10, fill: 0xffffff, fontFamily: 'Arial', fontWeight: 'bold' }),
+      });
+      val.position.set(112, y);
+      this.addChild(val);
+    });
+  }
+
+  private getClubStats(): { label: string; value: number; color: number }[] {
+    const d = this.cardDef;
+    if (d.position === 'GK') {
+      return [
+        { label: '守门', value: d.goalkeeping, color: 0xe9c46a },
+        { label: '封堵', value: d.blocking,    color: 0x74c69d },
+        { label: '传球', value: d.passing,     color: 0x74b9ff },
+      ];
+    }
+    if (d.position === 'DEF') {
+      return [
+        { label: '抢断', value: d.tackling,  color: 0x74c69d },
+        { label: '拦截', value: d.intercept, color: 0x4cc9f0 },
+        { label: '封堵', value: d.blocking,  color: 0x90e0ef },
+      ];
+    }
+    if (d.position === 'MID') {
+      return [
+        { label: '带球', value: d.dribble,   color: 0xffd93d },
+        { label: '传球', value: d.passing,   color: 0x74b9ff },
+        { label: '抢断', value: d.tackling,  color: 0x74c69d },
+      ];
+    }
+    // FWD
+    return [
+      { label: '带球', value: d.dribble,   color: 0xffd93d },
+      { label: '传球', value: d.passing,   color: 0x74b9ff },
+      { label: '射门', value: d.shooting,  color: 0xff6b6b },
+    ];
   }
 
   /**

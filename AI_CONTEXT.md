@@ -145,11 +145,21 @@ npx tsx scripts/test-match-engine.ts  # 比赛引擎控制台测试（6项）
 - ✅ Mod-G AI 美术（24 个 AI 生成图片资源）
 - ✅ main.ts 完整 6 场景流转已可运行
 
-### 当前阶段：P2 集成与联调
-- 全面替换 Mock → 真实实现，端到端压测
+### P2 已完成
+- ✅ 主菜单改为三按钮：开始游戏 / 俱乐部 / 招募（MenuScene）
+- ✅ 俱乐部界面（ClubScene）：左侧阵型选择器 + 中间球场布阵 + 下方替补席拖拽替换，自动存档
+- ✅ 阵型配置表（formations.ts）：6 种阵型（2-2-2 / 1-3-2 / 2-1-3 / 3-2-1 / 2-3-1 / 3-1-2）可扩展
+- ✅ 球员新属性（带球/传球/射门/抢断/拦截/封堵/守门）写入 schemas.ts + cards.json + 所有 Mock
+- ✅ CardView 新增 clubMode，按位置展示对应属性条形图（GK→守门，DEF→抢断/拦截/封堵，MID→带球/传球/抢断，FWD→带球/传球/射门）
+- ✅ PitchView 支持 slotDefs 自定义参数，供阵型切换动态重建
+- ✅ SaveManager 新增 selectedFormationId 字段
+- ✅ 开始游戏流程：StageSelect → 直接用 ClubScene 存档阵容 → 比赛（不再经过 FormationScene）
+
+### 当前阶段：P2 集成与联调（剩余）
 - 平衡参数调优（修改 balance.xlsx）
 - 微信小游戏适配（WxPlatform.ts 实现）
 - 填充更多球员卡和技能数据
+- 招募功能实现（当前为占位符）
 
 ### 后续规划
 - Phase 2：养成系统（抽卡、球员升级、每日场次限制）
@@ -179,6 +189,8 @@ npx tsx scripts/test-match-engine.ts  # 比赛引擎控制台测试（6项）
 | 数据查询接口 | `src/core/data/IDataManager.ts` |
 | 比赛模拟逻辑 | `src/core/systems/MatchEngine.ts` |
 | 布阵拖拽交互 | `src/render/scenes/FormationScene.ts` |
+| 俱乐部界面 | `src/render/scenes/ClubScene.ts` |
+| 阵型配置表 | `src/core/data/formations.ts` |
 | 比赛动画播放 | `src/render/scenes/MatchScene.ts` + `src/render/animations/MatchAnimator.ts` |
 | 场景流转编排 | `src/main.ts` |
 | 存档读写 | `src/storage/SaveManager.ts` |

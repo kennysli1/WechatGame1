@@ -10,6 +10,24 @@ export interface Keyframe {
   y: number;   // 归一化 y（0=顶部，1=底部）
 }
 
+// ---------------------------------------------------------------------------
+// 弹出提示数据
+// ---------------------------------------------------------------------------
+export interface TipData {
+  /** 'rate' = 成功率条形弹窗；'skill' = 技能 ICON 弹窗 */
+  type: 'rate' | 'skill';
+  /** 主标签，如"传球成功率"或技能名 */
+  label: string;
+  /** 成功率 0-1（仅 'rate' 类型） */
+  rate?: number;
+  /** 技能 ID（仅 'skill' 类型，用于查找图标） */
+  skillId?: string;
+  /** 前置 emoji 图标 */
+  icon: string;
+  /** 结果是否"成功"（影响颜色） */
+  success?: boolean;
+}
+
 export interface AnimationStep {
   event: MatchEvent;
   durationMs: number;
@@ -20,6 +38,21 @@ export interface AnimationStep {
   highlightPlayers: string[];
   /** 是否触发进球特效 */
   isGoal: boolean;
+  /** 步骤开始时弹出的提示（成功率 / 技能）*/
+  tip?: TipData;
+}
+
+// ---------------------------------------------------------------------------
+// 确定性伪随机比率（基于 minute 哈希，保证回放稳定）
+// ---------------------------------------------------------------------------
+function pseudoRate(base: number, variance: number, minute: number): number {
+  const v = ((minute * 7 + 13) % 17) / 17;
+  return Math.max(0.10, Math.min(0.95, base + (v - 0.5) * variance));
+}
+
+/** 将 snake_case 的 skillId 转换为可读的中英文展示名 */
+function formatSkillId(skillId: string): string {
+  return skillId.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +139,13 @@ export class MatchAnimator {
               ],
           highlightPlayers: [event.from, event.to],
           isGoal: false,
+          tip: {
+            type: 'rate',
+            label: '传球成功率',
+            rate: pseudoRate(event.success ? 0.72 : 0.30, 0.18, event.minute),
+            icon: event.success ? '✅' : '❌',
+            success: event.success,
+          },
         };
       }
 
@@ -132,6 +172,13 @@ export class MatchAnimator {
               ],
           highlightPlayers: [event.player],
           isGoal: false,
+          tip: {
+            type: 'rate',
+            label: '射门命中率',
+            rate: pseudoRate(event.onTarget ? 0.48 : 0.22, 0.16, event.minute),
+            icon: event.onTarget ? '🎯' : '💨',
+            success: event.onTarget,
+          },
         };
       }
 
@@ -148,6 +195,13 @@ export class MatchAnimator {
           ],
           highlightPlayers: [event.goalkeeper],
           isGoal: false,
+          tip: {
+            type: 'rate',
+            label: '扑救成功率',
+            rate: pseudoRate(0.55, 0.22, 0),
+            icon: '🧤',
+            success: true,
+          },
         };
       }
 
@@ -188,6 +242,13 @@ export class MatchAnimator {
           ],
           highlightPlayers: [event.tackler, event.target],
           isGoal: false,
+          tip: {
+            type: 'rate',
+            label: '铲球成功率',
+            rate: pseudoRate(event.success ? 0.55 : 0.28, 0.20, event.minute),
+            icon: event.success ? '🛡️' : '💢',
+            success: event.success,
+          },
         };
       }
 
@@ -203,6 +264,13 @@ export class MatchAnimator {
           ],
           highlightPlayers: [event.player, ...event.targets],
           isGoal: false,
+          tip: {
+            type: 'skill',
+            label: formatSkillId(event.skillId),
+            skillId: event.skillId,
+            icon: '✨',
+            success: true,
+          },
         };
       }
 
