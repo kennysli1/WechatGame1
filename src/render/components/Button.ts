@@ -13,7 +13,7 @@ export interface ButtonOptions {
 
 export class Button extends Container {
   private bg: Graphics;
-  private label: Text;
+  private labelText: Text;
   private baseColor: number;
   private hoverColor: number;
 
@@ -29,7 +29,7 @@ export class Button extends Container {
     this.drawBg(this.baseColor, w, h);
     this.addChild(this.bg);
 
-    this.label = new Text({
+    this.labelText = new Text({
       text: opts.label,
       style: new TextStyle({
         fontFamily: 'Arial, sans-serif',
@@ -39,9 +39,9 @@ export class Button extends Container {
         align: 'center',
       }),
     });
-    this.label.anchor.set(0.5);
-    this.label.position.set(w / 2, h / 2);
-    this.addChild(this.label);
+    this.labelText.anchor.set(0.5);
+    this.labelText.position.set(w / 2, h / 2);
+    this.addChild(this.labelText);
 
     this.eventMode = 'static';
     this.cursor = 'pointer';
@@ -64,6 +64,6 @@ export class Button extends Container {
   }
 
   setLabel(text: string): void {
-    this.label.text = text;
+    this.labelText.text = text;
   }
 }

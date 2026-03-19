@@ -1,83 +1,262 @@
-import { Container, Text, TextStyle } from 'pixi.js';
+import { Container, Text, TextStyle, Graphics } from 'pixi.js';
 import type { IScene } from '../SceneManager.ts';
 import { Panel } from '../components/Panel.ts';
 import { Button } from '../components/Button.ts';
 import type { MatchResult } from '../../core/models/MatchResult.ts';
 
+export interface ResultSceneData {
+  result: MatchResult;
+  stageId?: string;
+  rewards?: {
+    coins: number;
+    cardName?: string;
+  };
+  hasNextStage?: boolean;
+  cardNames?: Record<string, string>;
+}
+
 export class ResultScene implements IScene {
   readonly name = 'result';
   readonly container = new Container();
 
-  private titleText: Text;
-  private scoreText: Text;
-  private mvpText: Text;
+  private contentContainer = new Container();
+  private w: number;
+  private h: number;
   private onBack: () => void;
+  private onNextStage?: () => void;
 
-  constructor(opts: { width: number; height: number; onBack: () => void }) {
+  constructor(opts: {
+    width: number;
+    height: number;
+    onBack: () => void;
+    onNextStage?: () => void;
+  }) {
+    this.w = opts.width;
+    this.h = opts.height;
     this.onBack = opts.onBack;
+    this.onNextStage = opts.onNextStage;
 
-    const panel = new Panel({ width: opts.width, height: opts.height, color: 0x1a1a2e });
-    this.container.addChild(panel);
-
-    this.titleText = new Text({
-      text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 40,
-        fontWeight: 'bold',
-        fill: 0xffd700,
-      }),
-    });
-    this.titleText.anchor.set(0.5);
-    this.titleText.position.set(opts.width / 2, opts.height * 0.25);
-    this.container.addChild(this.titleText);
-
-    this.scoreText = new Text({
-      text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 28,
-        fill: 0xffffff,
-      }),
-    });
-    this.scoreText.anchor.set(0.5);
-    this.scoreText.position.set(opts.width / 2, opts.height * 0.4);
-    this.container.addChild(this.scoreText);
-
-    this.mvpText = new Text({
-      text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 20,
-        fill: 0xadb5bd,
-      }),
-    });
-    this.mvpText.anchor.set(0.5);
-    this.mvpText.position.set(opts.width / 2, opts.height * 0.52);
-    this.container.addChild(this.mvpText);
-
-    const backBtn = new Button({
-      label: '返回菜单',
-      width: 200,
-      height: 48,
-      color: 0x2d6a4f,
-      hoverColor: 0x40916c,
-      onClick: () => this.onBack(),
-    });
-    backBtn.position.set(opts.width / 2 - 100, opts.height * 0.7);
-    this.container.addChild(backBtn);
+    const bg = new Panel({ width: this.w, height: this.h, color: 0x1a1a2e });
+    this.container.addChild(bg);
+    this.container.addChild(this.contentContainer);
   }
 
   onEnter(data?: unknown): void {
-    const result = data as MatchResult | undefined;
-    if (!result) return;
+    this.contentContainer.removeChildren();
+    if (!data) return;
 
+    let result: MatchResult;
+    let rewards: ResultSceneData['rewards'];
+    let hasNextStage = false;
+    let cardNames: Record<string, string> = {};
+
+    if (this.isResultSceneData(data)) {
+      result = data.result;
+      rewards = data.rewards;
+      hasNextStage = data.hasNextStage ?? false;
+      cardNames = data.cardNames ?? {};
+    } else {
+      result = data as MatchResult;
+    }
+
+    const resolveName = (id: string) => cardNames[id] ?? id;
     const won = result.homeGoals > result.awayGoals;
     const draw = result.homeGoals === result.awayGoals;
-    this.titleText.text = won ? '胜利！' : draw ? '平局' : '失败';
-    this.titleText.style.fill = won ? 0xffd700 : draw ? 0xadb5bd : 0xe63946;
 
-    this.scoreText.text = `${result.homeName} ${result.homeGoals} : ${result.awayGoals} ${result.awayName}`;
-    this.mvpText.text = `MVP: ${result.mvpPlayerId}`;
+    this.buildTitle(won, draw);
+    this.buildScore(result);
+    this.buildDivider(150);
+
+    let yPos = 168;
+    yPos = this.buildGoalSummary(result, resolveName, yPos);
+    yPos = this.buildMVP(result, resolveName, yPos);
+    yPos = this.buildRewards(won, rewards, yPos);
+    this.buildButtons(won, hasNextStage, yPos);
+  }
+
+  private isResultSceneData(data: unknown): data is ResultSceneData {
+    return typeof data === 'object' && data !== null && 'result' in data;
+  }
+
+  private buildTitle(won: boolean, draw: boolean): void {
+    const titleText = new Text({
+      text: won ? '胜利！' : draw ? '平局' : '失败',
+      style: new TextStyle({
+        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontSize: 44,
+        fontWeight: 'bold',
+        fill: won ? 0xffd700 : draw ? 0xadb5bd : 0xe63946,
+        dropShadow: { color: 0x000000, blur: 6, distance: 3, angle: Math.PI / 4 },
+      }),
+    });
+    titleText.anchor.set(0.5);
+    titleText.position.set(this.w / 2, 55);
+    this.contentContainer.addChild(titleText);
+  }
+
+  private buildScore(result: MatchResult): void {
+    const scoreText = new Text({
+      text: `${result.homeName}  ${result.homeGoals} : ${result.awayGoals}  ${result.awayName}`,
+      style: new TextStyle({
+        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontSize: 30,
+        fontWeight: 'bold',
+        fill: 0xffffff,
+      }),
+    });
+    scoreText.anchor.set(0.5);
+    scoreText.position.set(this.w / 2, 115);
+    this.contentContainer.addChild(scoreText);
+  }
+
+  private buildDivider(y: number, widthFrac = 0.6): void {
+    const line = new Graphics();
+    const halfW = this.w * widthFrac / 2;
+    line.moveTo(this.w / 2 - halfW, y);
+    line.lineTo(this.w / 2 + halfW, y);
+    line.stroke({ color: 0x444466, width: 1 });
+    this.contentContainer.addChild(line);
+  }
+
+  private buildGoalSummary(
+    result: MatchResult,
+    resolveName: (id: string) => string,
+    yPos: number,
+  ): number {
+    const goals = result.events.filter(e => e.type === 'goal');
+
+    if (goals.length > 0) {
+      const header = this.createText('进球记录', 18, 0xadb5bd, true);
+      header.anchor.set(0.5, 0);
+      header.position.set(this.w / 2, yPos);
+      this.contentContainer.addChild(header);
+      yPos += 28;
+
+      const maxShown = 5;
+      for (const g of goals.slice(0, maxShown)) {
+        if (g.type === 'goal') {
+          const assist = g.assist ? `  (助攻: ${resolveName(g.assist)})` : '';
+          const line = this.createText(
+            `\u26bd ${g.minute}' ${resolveName(g.scorer)}${assist}`,
+            16, 0xf0f0f0,
+          );
+          line.anchor.set(0.5, 0);
+          line.position.set(this.w / 2, yPos);
+          this.contentContainer.addChild(line);
+          yPos += 24;
+        }
+      }
+      if (goals.length > maxShown) {
+        const more = this.createText(`... 还有 ${goals.length - maxShown} 个进球`, 14, 0x888888);
+        more.anchor.set(0.5, 0);
+        more.position.set(this.w / 2, yPos);
+        this.contentContainer.addChild(more);
+        yPos += 22;
+      }
+    } else {
+      const noGoals = this.createText('0:0 白卷一场', 16, 0x888888);
+      noGoals.anchor.set(0.5, 0);
+      noGoals.position.set(this.w / 2, yPos);
+      this.contentContainer.addChild(noGoals);
+      yPos += 24;
+    }
+
+    return yPos + 8;
+  }
+
+  private buildMVP(
+    result: MatchResult,
+    resolveName: (id: string) => string,
+    yPos: number,
+  ): number {
+    const mvp = this.createText(`MVP: ${resolveName(result.mvpPlayerId)}`, 20, 0xffd700, true);
+    mvp.anchor.set(0.5, 0);
+    mvp.position.set(this.w / 2, yPos);
+    this.contentContainer.addChild(mvp);
+    return yPos + 36;
+  }
+
+  private buildRewards(
+    won: boolean,
+    rewards: ResultSceneData['rewards'],
+    yPos: number,
+  ): number {
+    if (!won || !rewards) return yPos;
+
+    this.buildDivider(yPos, 0.4);
+    yPos += 14;
+
+    const title = this.createText('关卡奖励', 20, 0xffd700, true);
+    title.anchor.set(0.5, 0);
+    title.position.set(this.w / 2, yPos);
+    this.contentContainer.addChild(title);
+    yPos += 28;
+
+    const coins = this.createText(`+${rewards.coins} 金币`, 18, 0xf0f0f0);
+    coins.anchor.set(0.5, 0);
+    coins.position.set(this.w / 2, yPos);
+    this.contentContainer.addChild(coins);
+    yPos += 26;
+
+    if (rewards.cardName) {
+      const cardReward = this.createText(`获得球员: ${rewards.cardName}`, 18, 0x40916c);
+      cardReward.anchor.set(0.5, 0);
+      cardReward.position.set(this.w / 2, yPos);
+      this.contentContainer.addChild(cardReward);
+      yPos += 26;
+    }
+
+    return yPos;
+  }
+
+  private buildButtons(won: boolean, hasNextStage: boolean, yPos: number): void {
+    const btnY = Math.max(yPos + 25, this.h - 75);
+
+    if (hasNextStage && won && this.onNextStage) {
+      const backBtn = new Button({
+        label: '返回菜单',
+        width: 180,
+        height: 48,
+        color: 0x495057,
+        hoverColor: 0x6c757d,
+        onClick: () => this.onBack(),
+      });
+      backBtn.position.set(this.w / 2 - 200, btnY);
+      this.contentContainer.addChild(backBtn);
+
+      const nextBtn = new Button({
+        label: '下一关',
+        width: 180,
+        height: 48,
+        color: 0x2d6a4f,
+        hoverColor: 0x40916c,
+        onClick: () => this.onNextStage!(),
+      });
+      nextBtn.position.set(this.w / 2 + 20, btnY);
+      this.contentContainer.addChild(nextBtn);
+    } else {
+      const backBtn = new Button({
+        label: '返回菜单',
+        width: 200,
+        height: 48,
+        color: 0x2d6a4f,
+        hoverColor: 0x40916c,
+        onClick: () => this.onBack(),
+      });
+      backBtn.position.set(this.w / 2 - 100, btnY);
+      this.contentContainer.addChild(backBtn);
+    }
+  }
+
+  private createText(content: string, size: number, color: number, bold = false): Text {
+    return new Text({
+      text: content,
+      style: new TextStyle({
+        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontSize: size,
+        fontWeight: bold ? 'bold' : 'normal',
+        fill: color,
+      }),
+    });
   }
 }

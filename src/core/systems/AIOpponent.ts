@@ -1,9 +1,14 @@
-import type { DataManager } from '../data/DataManager.ts';
+import type { IDataManager } from '../data/IDataManager.ts';
 import type { Team, TeamSlot } from '../models/Team.ts';
 import type { AITeamDef } from '../data/schemas.ts';
 
-export class AIOpponent {
-  constructor(private data: DataManager) {}
+export interface IAIOpponent {
+  generateTeam(stageId: string): Team;
+  generateTeamById(teamId: string): Team;
+}
+
+export class AIOpponent implements IAIOpponent {
+  constructor(private data: IDataManager) {}
 
   generateTeam(stageId: string): Team {
     const stage = this.data.getStage(stageId);

@@ -7,8 +7,9 @@ import type {
   AssetManifestEntry,
   Position,
 } from './schemas.ts';
+import type { IDataManager } from './IDataManager.ts';
 
-export class DataManager {
+export class DataManager implements IDataManager {
   private cards = new Map<string, CardDef>();
   private skills = new Map<string, SkillDef>();
   private aiTeams = new Map<string, AITeamDef>();

@@ -3,24 +3,28 @@ import type { Team, TeamSlot } from '../models/Team.ts';
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
+  warnings: string[];
 }
 
 export class FormationValidator {
-  static readonly MIN_PLAYERS = 5;
-  static readonly MAX_PLAYERS = 7;
+  static readonly TEAM_SIZE = 7;
+  static readonly GK_COUNT = 1;
+  static readonly OUTFIELD_COUNT = 6;
 
   validate(team: Team): ValidationResult {
     const errors: string[] = [];
+    const warnings: string[] = [];
 
-    if (team.formation.length < FormationValidator.MIN_PLAYERS) {
-      errors.push(`需要至少 ${FormationValidator.MIN_PLAYERS} 名球员`);
-    }
-    if (team.formation.length > FormationValidator.MAX_PLAYERS) {
-      errors.push(`最多 ${FormationValidator.MAX_PLAYERS} 名球员`);
+    if (team.formation.length !== FormationValidator.TEAM_SIZE) {
+      errors.push(
+        `阵容必须恰好 ${FormationValidator.TEAM_SIZE} 人（当前 ${team.formation.length} 人）`,
+      );
     }
 
-    const gkCount = team.formation.filter((s) => s.card.position === 'GK').length;
-    if (gkCount !== 1) {
+    const gkCount = team.formation.filter(
+      (s) => s.card.position === 'GK',
+    ).length;
+    if (gkCount !== FormationValidator.GK_COUNT) {
       errors.push(`必须有且仅有 1 名守门员，当前 ${gkCount} 名`);
     }
 
@@ -34,7 +38,21 @@ export class FormationValidator {
       errors.push('球员位置不能重叠');
     }
 
-    return { valid: errors.length === 0, errors };
+    const defCount = team.formation.filter(
+      (s) => s.card.position === 'DEF',
+    ).length;
+    const midCount = team.formation.filter(
+      (s) => s.card.position === 'MID',
+    ).length;
+    const fwdCount = team.formation.filter(
+      (s) => s.card.position === 'FWD',
+    ).length;
+
+    if (defCount === 0) warnings.push('建议至少 1 名后卫');
+    if (midCount === 0) warnings.push('建议至少 1 名中场');
+    if (fwdCount === 0) warnings.push('建议至少 1 名前锋');
+
+    return { valid: errors.length === 0, errors, warnings };
   }
 
   private hasOverlap(slots: TeamSlot[]): boolean {

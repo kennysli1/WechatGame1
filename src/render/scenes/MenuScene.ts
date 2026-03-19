@@ -7,9 +7,16 @@ export class MenuScene implements IScene {
   readonly name = 'menu';
   readonly container = new Container();
   private onStartGame: () => void;
+  private onSettings: () => void;
 
-  constructor(opts: { width: number; height: number; onStartGame: () => void }) {
+  constructor(opts: {
+    width: number;
+    height: number;
+    onStartGame: () => void;
+    onSettings?: () => void;
+  }) {
     this.onStartGame = opts.onStartGame;
+    this.onSettings = opts.onSettings ?? (() => {});
     this.build(opts.width, opts.height);
   }
 
@@ -33,7 +40,7 @@ export class MenuScene implements IScene {
       }),
     });
     title.anchor.set(0.5);
-    title.position.set(w / 2, h * 0.3);
+    title.position.set(w / 2, h * 0.28);
     this.container.addChild(title);
 
     const subtitle = new Text({
@@ -45,7 +52,7 @@ export class MenuScene implements IScene {
       }),
     });
     subtitle.anchor.set(0.5);
-    subtitle.position.set(w / 2, h * 0.3 + 48);
+    subtitle.position.set(w / 2, h * 0.28 + 48);
     this.container.addChild(subtitle);
 
     const startBtn = new Button({
@@ -56,8 +63,20 @@ export class MenuScene implements IScene {
       hoverColor: 0x40916c,
       onClick: () => this.onStartGame(),
     });
-    startBtn.position.set(w / 2 - 110, h * 0.6);
+    startBtn.position.set(w / 2 - 110, h * 0.55);
     this.container.addChild(startBtn);
+
+    const settingsBtn = new Button({
+      label: '设置',
+      width: 160,
+      height: 44,
+      color: 0x495057,
+      hoverColor: 0x6c757d,
+      fontSize: 18,
+      onClick: () => this.onSettings(),
+    });
+    settingsBtn.position.set(w / 2 - 80, h * 0.55 + 76);
+    this.container.addChild(settingsBtn);
   }
 
   onEnter(): void {
