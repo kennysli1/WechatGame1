@@ -1,8 +1,9 @@
-import { Container, Text, TextStyle, Graphics } from 'pixi.js';
+import { Container, Text, Graphics } from 'pixi.js';
 import type { IScene } from '../SceneManager.ts';
 import { Panel } from '../components/Panel.ts';
 import { Button } from '../components/Button.ts';
 import type { MatchResult } from '../../core/models/MatchResult.ts';
+import { Colors, makeTextStyle } from '../theme.ts';
 
 export interface ResultSceneData {
   result: MatchResult;
@@ -36,7 +37,7 @@ export class ResultScene implements IScene {
     this.onBack = opts.onBack;
     this.onNextStage = opts.onNextStage;
 
-    const bg = new Panel({ width: this.w, height: this.h, color: 0x1a1a2e });
+    const bg = new Panel({ width: this.w, height: this.h, color: Colors.bgDark, outline: false });
     this.container.addChild(bg);
     this.container.addChild(this.contentContainer);
   }
@@ -81,12 +82,11 @@ export class ResultScene implements IScene {
   private buildTitle(won: boolean, draw: boolean): void {
     const titleText = new Text({
       text: won ? '胜利！' : draw ? '平局' : '失败',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+      style: makeTextStyle({
         fontSize: 44,
         fontWeight: 'bold',
-        fill: won ? 0xffd700 : draw ? 0xadb5bd : 0xe63946,
-        dropShadow: { color: 0x000000, blur: 6, distance: 3, angle: Math.PI / 4 },
+        fill: won ? Colors.gold : draw ? Colors.textSecondary : Colors.actionRed,
+        dropShadow: true,
       }),
     });
     titleText.anchor.set(0.5);
@@ -97,12 +97,7 @@ export class ResultScene implements IScene {
   private buildScore(result: MatchResult): void {
     const scoreText = new Text({
       text: `${result.homeName}  ${result.homeGoals} : ${result.awayGoals}  ${result.awayName}`,
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 30,
-        fontWeight: 'bold',
-        fill: 0xffffff,
-      }),
+      style: makeTextStyle({ fontSize: 30, fontWeight: 'bold' }),
     });
     scoreText.anchor.set(0.5);
     scoreText.position.set(this.w / 2, 115);
@@ -114,7 +109,7 @@ export class ResultScene implements IScene {
     const halfW = this.w * widthFrac / 2;
     line.moveTo(this.w / 2 - halfW, y);
     line.lineTo(this.w / 2 + halfW, y);
-    line.stroke({ color: 0x444466, width: 1 });
+    line.stroke({ color: Colors.divider, width: 1 });
     this.contentContainer.addChild(line);
   }
 
@@ -126,7 +121,7 @@ export class ResultScene implements IScene {
     const goals = result.events.filter(e => e.type === 'goal');
 
     if (goals.length > 0) {
-      const header = this.createText('进球记录', 18, 0xadb5bd, true);
+      const header = this.txt('进球记录', 18, Colors.textSecondary, true);
       header.anchor.set(0.5, 0);
       header.position.set(this.w / 2, yPos);
       this.contentContainer.addChild(header);
@@ -136,9 +131,9 @@ export class ResultScene implements IScene {
       for (const g of goals.slice(0, maxShown)) {
         if (g.type === 'goal') {
           const assist = g.assist ? `  (助攻: ${resolveName(g.assist)})` : '';
-          const line = this.createText(
+          const line = this.txt(
             `\u26bd ${g.minute}' ${resolveName(g.scorer)}${assist}`,
-            16, 0xf0f0f0,
+            16, Colors.textPrimary,
           );
           line.anchor.set(0.5, 0);
           line.position.set(this.w / 2, yPos);
@@ -147,14 +142,14 @@ export class ResultScene implements IScene {
         }
       }
       if (goals.length > maxShown) {
-        const more = this.createText(`... 还有 ${goals.length - maxShown} 个进球`, 14, 0x888888);
+        const more = this.txt(`... 还有 ${goals.length - maxShown} 个进球`, 14, Colors.textMuted);
         more.anchor.set(0.5, 0);
         more.position.set(this.w / 2, yPos);
         this.contentContainer.addChild(more);
         yPos += 22;
       }
     } else {
-      const noGoals = this.createText('0:0 白卷一场', 16, 0x888888);
+      const noGoals = this.txt('0:0 白卷一场', 16, Colors.textMuted);
       noGoals.anchor.set(0.5, 0);
       noGoals.position.set(this.w / 2, yPos);
       this.contentContainer.addChild(noGoals);
@@ -169,7 +164,7 @@ export class ResultScene implements IScene {
     resolveName: (id: string) => string,
     yPos: number,
   ): number {
-    const mvp = this.createText(`MVP: ${resolveName(result.mvpPlayerId)}`, 20, 0xffd700, true);
+    const mvp = this.txt(`MVP: ${resolveName(result.mvpPlayerId)}`, 20, Colors.gold, true);
     mvp.anchor.set(0.5, 0);
     mvp.position.set(this.w / 2, yPos);
     this.contentContainer.addChild(mvp);
@@ -186,20 +181,20 @@ export class ResultScene implements IScene {
     this.buildDivider(yPos, 0.4);
     yPos += 14;
 
-    const title = this.createText('关卡奖励', 20, 0xffd700, true);
+    const title = this.txt('关卡奖励', 20, Colors.gold, true);
     title.anchor.set(0.5, 0);
     title.position.set(this.w / 2, yPos);
     this.contentContainer.addChild(title);
     yPos += 28;
 
-    const coins = this.createText(`+${rewards.coins} 金币`, 18, 0xf0f0f0);
+    const coins = this.txt(`+${rewards.coins} 金币`, 18, Colors.textPrimary);
     coins.anchor.set(0.5, 0);
     coins.position.set(this.w / 2, yPos);
     this.contentContainer.addChild(coins);
     yPos += 26;
 
     if (rewards.cardName) {
-      const cardReward = this.createText(`获得球员: ${rewards.cardName}`, 18, 0x40916c);
+      const cardReward = this.txt(`获得球员: ${rewards.cardName}`, 18, Colors.success);
       cardReward.anchor.set(0.5, 0);
       cardReward.position.set(this.w / 2, yPos);
       this.contentContainer.addChild(cardReward);
@@ -217,8 +212,8 @@ export class ResultScene implements IScene {
         label: '返回菜单',
         width: 180,
         height: 48,
-        color: 0x495057,
-        hoverColor: 0x6c757d,
+        color: Colors.btnNeutral,
+        hoverColor: Colors.btnNeutralHover,
         onClick: () => this.onBack(),
       });
       backBtn.position.set(this.w / 2 - 200, btnY);
@@ -228,8 +223,8 @@ export class ResultScene implements IScene {
         label: '下一关',
         width: 180,
         height: 48,
-        color: 0x2d6a4f,
-        hoverColor: 0x40916c,
+        color: Colors.btnPrimary,
+        hoverColor: Colors.btnPrimaryHover,
         onClick: () => this.onNextStage!(),
       });
       nextBtn.position.set(this.w / 2 + 20, btnY);
@@ -239,8 +234,8 @@ export class ResultScene implements IScene {
         label: '返回菜单',
         width: 200,
         height: 48,
-        color: 0x2d6a4f,
-        hoverColor: 0x40916c,
+        color: Colors.btnPrimary,
+        hoverColor: Colors.btnPrimaryHover,
         onClick: () => this.onBack(),
       });
       backBtn.position.set(this.w / 2 - 100, btnY);
@@ -248,15 +243,10 @@ export class ResultScene implements IScene {
     }
   }
 
-  private createText(content: string, size: number, color: number, bold = false): Text {
+  private txt(content: string, size: number, color: number, bold = false): Text {
     return new Text({
       text: content,
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: size,
-        fontWeight: bold ? 'bold' : 'normal',
-        fill: color,
-      }),
+      style: makeTextStyle({ fontSize: size, fontWeight: bold ? 'bold' : 'normal', fill: color }),
     });
   }
 }

@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640">
+  <defs>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1628"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e6b35"/>
+      <stop offset="100%" stop-color="#2d8a4e"/>
+    </linearGradient>
+    <linearGradient id="standLeft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#2a2a4e"/>
+    </linearGradient>
+    <linearGradient id="standRight" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#2a2a4e"/>
+    </linearGradient>
+    <linearGradient id="standTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#252545"/>
+    </linearGradient>
+    <!-- Audience color dots pattern -->
+    <pattern id="audienceLeft" x="0" y="0" width="14" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="2.5" fill="#e63946" opacity="0.7"/>
+      <circle cx="11" cy="7" r="2.5" fill="#457b9d" opacity="0.7"/>
+      <circle cx="7" cy="2" r="2" fill="#e9c46a" opacity="0.5"/>
+    </pattern>
+    <pattern id="audienceRight" x="0" y="0" width="14" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="5" r="2.5" fill="#2a9d8f" opacity="0.7"/>
+      <circle cx="10" cy="3" r="2.5" fill="#e9c46a" opacity="0.7"/>
+      <circle cx="7" cy="8" r="2" fill="#e63946" opacity="0.5"/>
+    </pattern>
+    <pattern id="audienceTop" x="0" y="0" width="12" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="2" fill="#457b9d" opacity="0.5"/>
+      <circle cx="9" cy="6" r="2" fill="#e63946" opacity="0.5"/>
+    </pattern>
+    <!-- Grass stripe pattern -->
+    <pattern id="grassStripes" x="0" y="0" width="1" height="0.125" patternUnits="objectBoundingBox">
+      <rect x="0" y="0" width="1" height="0.0625" fill="#258042" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="640" fill="url(#skyGrad)"/>
+
+  <!-- Stadium outer frame -->
+  <rect x="0" y="0" width="960" height="640" fill="#0f1a30" opacity="0.5"/>
+
+  <!-- Top stand (behind far goal line) -->
+  <polygon points="170,20 790,20 770,80 190,80" fill="url(#standTop)"/>
+  <polygon points="175,25 785,25 770,75 190,75" fill="url(#audienceTop)" opacity="0.8"/>
+  <!-- Top stand border -->
+  <line x1="170" y1="20" x2="790" y2="20" stroke="#3a5a7a" stroke-width="2"/>
+  <line x1="190" y1="80" x2="770" y2="80" stroke="#3a5a7a" stroke-width="1.5"/>
+
+  <!-- Left stand (perspective trapezoid) -->
+  <polygon points="10,50 170,20 30,560 0,480" fill="url(#standLeft)"/>
+  <polygon points="20,60 160,30 35,545 8,470" fill="url(#audienceLeft)" opacity="0.7"/>
+  <line x1="10" y1="50" x2="0" y2="480" stroke="#3a5a7a" stroke-width="1.5"/>
+
+  <!-- Right stand -->
+  <polygon points="790,20 950,50 960,480 930,560" fill="url(#standRight)"/>
+  <polygon points="800,30 940,60 952,470 925,545" fill="url(#audienceRight)" opacity="0.7"/>
+  <line x1="950" y1="50" x2="960" y2="480" stroke="#3a5a7a" stroke-width="1.5"/>
+
+  <!-- Bottom stand (near side) -->
+  <polygon points="30,560 930,560 960,620 0,620" fill="#1e1e3a"/>
+  <!-- Ad boards along near touchline -->
+  <polygon points="35,558 925,558 928,575 32,575" fill="#1a2744"/>
+  <rect x="80" y="560" width="120" height="13" rx="2" fill="#2a4a7a" opacity="0.8"/>
+  <rect x="250" y="560" width="100" height="13" rx="2" fill="#8b2e3a" opacity="0.8"/>
+  <rect x="420" y="560" width="130" height="13" rx="2" fill="#2a6a4a" opacity="0.8"/>
+  <rect x="610" y="560" width="110" height="13" rx="2" fill="#4a3a7a" opacity="0.8"/>
+  <rect x="780" y="560" width="100" height="13" rx="2" fill="#7a5a2a" opacity="0.8"/>
+
+  <!-- ======= PITCH (perspective trapezoid) ======= -->
+  <!-- Pitch outline: top narrower, bottom wider -->
+  <!-- Top-left(190,85) Top-right(770,85) Bot-left(30,555) Bot-right(930,555) -->
+  <polygon points="190,85 770,85 930,555 30,555" fill="url(#grassGrad)"/>
+
+  <!-- Grass stripes (horizontal bands in perspective) -->
+  <g opacity="0.35">
+    <polygon points="190,85 770,85 764,143.75 196,143.75" fill="#258042"/>
+    <polygon points="202,202.5 758,202.5 752,261.25 208,261.25" fill="#258042"/>
+    <polygon points="214,320 746,320 740,378.75 220,378.75" fill="#258042"/>
+    <polygon points="226,437.5 734,437.5 728,496.25 232,496.25" fill="#258042"/>
+  </g>
+
+  <!-- Pitch border lines -->
+  <polygon points="190,85 770,85 930,555 30,555" fill="none" stroke="white" stroke-width="3"/>
+
+  <!-- Center line (vertical in perspective = connecting midpoints of top and bottom edges) -->
+  <line x1="480" y1="85" x2="480" y2="555" stroke="white" stroke-width="2" opacity="0.9"/>
+
+  <!-- Center circle -->
+  <ellipse cx="480" cy="320" rx="52" ry="40" fill="none" stroke="white" stroke-width="2" opacity="0.85"/>
+  <circle cx="480" cy="320" r="4" fill="white" opacity="0.9"/>
+
+  <!-- Left penalty area -->
+  <polygon points="190,200 280,200 308,440 30,440 30,320" fill="none" stroke="white" stroke-width="2" opacity="0.85"/>
+  <!-- Simplified: just the box shape following perspective -->
+  <!-- Actually let me draw it properly -->
+  <!-- Left penalty area: nx=0..0.16, ny=0.22..0.78 mapped to perspective -->
+  <polygon points="190,200 290,195 315,450 30,455" fill="none" stroke="white" stroke-width="2" opacity="0.85"/>
+
+  <!-- Left goal area (small box) -->
+  <polygon points="190,270 225,268 232,385 30,388" fill="none" stroke="white" stroke-width="2" opacity="0.8"/>
+
+  <!-- Right penalty area -->
+  <polygon points="670,195 770,200 930,455 645,450" fill="none" stroke="white" stroke-width="2" opacity="0.85"/>
+
+  <!-- Right goal area (small box) -->
+  <polygon points="735,268 770,270 930,388 728,385" fill="none" stroke="white" stroke-width="2" opacity="0.8"/>
+
+  <!-- Left penalty spot -->
+  <circle cx="250" cy="320" r="3" fill="white" opacity="0.8"/>
+  <!-- Right penalty spot -->
+  <circle cx="710" cy="320" r="3" fill="white" opacity="0.8"/>
+
+  <!-- ======= GOALS ======= -->
+  <!-- Left goal (net structure) -->
+  <g opacity="0.9">
+    <!-- Goal frame -->
+    <line x1="188" y1="270" x2="188" y2="388" stroke="#dddddd" stroke-width="5"/>
+    <!-- Net backing -->
+    <polygon points="188,270 168,260 168,398 188,388" fill="#888888" opacity="0.25"/>
+    <polygon points="188,270 168,260 168,398 188,388" fill="none" stroke="#cccccc" stroke-width="1.5" opacity="0.6"/>
+    <!-- Net mesh lines -->
+    <line x1="188" y1="290" x2="168" y2="283" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="188" y1="310" x2="168" y2="305" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="188" y1="330" x2="168" y2="327" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="188" y1="350" x2="168" y2="349" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="188" y1="370" x2="168" y2="371" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <!-- Crossbar -->
+    <line x1="186" y1="270" x2="168" y2="260" stroke="#dddddd" stroke-width="3"/>
+    <line x1="186" y1="388" x2="168" y2="398" stroke="#dddddd" stroke-width="3"/>
+  </g>
+
+  <!-- Right goal -->
+  <g opacity="0.9">
+    <line x1="772" y1="270" x2="772" y2="388" stroke="#dddddd" stroke-width="5"/>
+    <polygon points="772,270 792,260 792,398 772,388" fill="#888888" opacity="0.25"/>
+    <polygon points="772,270 792,260 792,398 772,388" fill="none" stroke="#cccccc" stroke-width="1.5" opacity="0.6"/>
+    <line x1="772" y1="290" x2="792" y2="283" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="772" y1="310" x2="792" y2="305" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="772" y1="330" x2="792" y2="327" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="772" y1="350" x2="792" y2="349" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="772" y1="370" x2="792" y2="371" stroke="#aaaaaa" stroke-width="0.8" opacity="0.4"/>
+    <line x1="774" y1="270" x2="792" y2="260" stroke="#dddddd" stroke-width="3"/>
+    <line x1="774" y1="388" x2="792" y2="398" stroke="#dddddd" stroke-width="3"/>
+  </g>
+
+  <!-- Stadium roof structure hint (top) -->
+  <g opacity="0.4">
+    <line x1="100" y1="0" x2="200" y2="20" stroke="#4a6a8a" stroke-width="3"/>
+    <line x1="300" y1="0" x2="350" y2="20" stroke="#4a6a8a" stroke-width="3"/>
+    <line x1="500" y1="0" x2="480" y2="20" stroke="#4a6a8a" stroke-width="3"/>
+    <line x1="660" y1="0" x2="610" y2="20" stroke="#4a6a8a" stroke-width="3"/>
+    <line x1="860" y1="0" x2="760" y2="20" stroke="#4a6a8a" stroke-width="3"/>
+  </g>
+
+  <!-- Floodlight glow effects -->
+  <circle cx="120" cy="30" r="60" fill="#ffffcc" opacity="0.04"/>
+  <circle cx="840" cy="30" r="60" fill="#ffffcc" opacity="0.04"/>
+  <circle cx="120" cy="30" r="8" fill="#ffffee" opacity="0.3"/>
+  <circle cx="840" cy="30" r="8" fill="#ffffee" opacity="0.3"/>
+</svg>

@@ -41,6 +41,10 @@ function inlineGameData(): Plugin {
             const relPath = 'assets/' + full.substring(assetsRoot.length + 1).replace(/\\/g, '/');
             const b64 = readFileSync(full).toString('base64');
             assetMap[relPath] = `data:image/png;base64,${b64}`;
+          } else if (entry.endsWith('.svg')) {
+            const relPath = 'assets/' + full.substring(assetsRoot.length + 1).replace(/\\/g, '/');
+            const b64 = readFileSync(full).toString('base64');
+            assetMap[relPath] = `data:image/svg+xml;base64,${b64}`;
           }
         }
       }

@@ -4,26 +4,44 @@
     "name": "新手试炼",
     "aiTeamId": "ai_team_001",
     "unlockAfterStage": "",
-    "rewardCardId": "mf_001",
+    "rewardCardId": "mf_003",
     "rewardCoins": 100,
-    "description": "你的第一场比赛"
+    "description": "你的第一场比赛，击败菜鸟队证明实力"
   },
   {
     "stageId": "stage_002",
-    "name": "城市联赛",
+    "name": "街头争霸",
     "aiTeamId": "ai_team_002",
     "unlockAfterStage": "stage_001",
-    "rewardCardId": "fw_001",
+    "rewardCardId": "df_003",
     "rewardCoins": 200,
-    "description": "面对更强的对手"
+    "description": "街头混混来势汹汹，小心应对"
   },
   {
     "stageId": "stage_003",
-    "name": "冠军之路",
+    "name": "武林大会",
     "aiTeamId": "ai_team_003",
     "unlockAfterStage": "stage_002",
     "rewardCardId": "fw_003",
+    "rewardCoins": 350,
+    "description": "武当少年队功力深厚，硬仗开始"
+  },
+  {
+    "stageId": "stage_004",
+    "name": "少林争锋",
+    "aiTeamId": "ai_team_004",
+    "unlockAfterStage": "stage_003",
+    "rewardCardId": "gk_002",
     "rewardCoins": 500,
-    "description": "终极挑战"
+    "description": "少林精英全员出击，生死一战"
+  },
+  {
+    "stageId": "stage_005",
+    "name": "天下第一",
+    "aiTeamId": "ai_team_005",
+    "unlockAfterStage": "stage_004",
+    "rewardCardId": "fw_005",
+    "rewardCoins": 1000,
+    "description": "终极挑战！击败天下第一队登顶巅峰"
   }
 ]

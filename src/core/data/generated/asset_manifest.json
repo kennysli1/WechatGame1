@@ -9,6 +9,15 @@
     "description": "守门员001卡面"
   },
   {
+    "key": "card_gk_002",
+    "path": "assets/cards/card_gk_002.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "守门员002卡面"
+  },
+  {
     "key": "card_df_001",
     "path": "assets/cards/card_df_001.png",
     "width": 256,
@@ -27,6 +36,15 @@
     "description": "后卫002卡面"
   },
   {
+    "key": "card_df_003",
+    "path": "assets/cards/card_df_003.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "后卫003卡面"
+  },
+  {
     "key": "card_mf_001",
     "path": "assets/cards/card_mf_001.png",
     "width": 256,
@@ -43,6 +61,24 @@
     "category": "card",
     "required": false,
     "description": "中场002卡面"
+  },
+  {
+    "key": "card_mf_003",
+    "path": "assets/cards/card_mf_003.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "中场003卡面"
+  },
+  {
+    "key": "card_mf_004",
+    "path": "assets/cards/card_mf_004.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "中场004卡面"
   },
   {
     "key": "card_fw_001",
@@ -70,6 +106,24 @@
     "category": "card",
     "required": false,
     "description": "前锋003卡面"
+  },
+  {
+    "key": "card_fw_004",
+    "path": "assets/cards/card_fw_004.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "前锋004卡面"
+  },
+  {
+    "key": "card_fw_005",
+    "path": "assets/cards/card_fw_005.png",
+    "width": 256,
+    "height": 360,
+    "category": "card",
+    "required": false,
+    "description": "前锋005卡面"
   },
   {
     "key": "pitch_bg",

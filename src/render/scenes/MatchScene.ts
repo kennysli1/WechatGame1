@@ -1,26 +1,45 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Text, TextStyle, Sprite, Assets, Texture } from 'pixi.js';
 import type { IScene } from '../SceneManager.ts';
-import { PitchView } from '../components/PitchView.ts';
-import { Panel } from '../components/Panel.ts';
+import type { AssetManager } from '../AssetManager.ts';
 import { MatchAnimator, type AnimationStep, type Keyframe, type TipData } from '../animations/MatchAnimator.ts';
 import type { MatchResult } from '../../core/models/MatchResult.ts';
 import type { Team } from '../../core/models/Team.ts';
+import type { Position } from '../../core/data/schemas.ts';
+import { Colors, OUTLINE_WIDTH, BORDER_RADIUS_SM, Fonts, makeTextStyle } from '../theme.ts';
 
-// ---------------------------------------------------------------------------
-// 颜色常量
-// ---------------------------------------------------------------------------
-const COLOR_HOME      = 0x3a86ff;
-const COLOR_AWAY      = 0xff4757;
-const COLOR_BALL      = 0xffd700;
-const COLOR_GOAL_FLASH = 0xffd700;
+// ── Perspective pitch corners (must match the SVG background) ────────────────
+// These define the trapezoid of the playing field in screen pixels.
+// Top = far side (narrower), Bottom = near side (wider).
+const PITCH_TL = { x: 190, y: 85 };   // top-left
+const PITCH_TR = { x: 770, y: 85 };   // top-right
+const PITCH_BL = { x: 30,  y: 555 };  // bottom-left
+const PITCH_BR = { x: 930, y: 555 };  // bottom-right
 
-// ---------------------------------------------------------------------------
-// 内插函数（多段线性插值）
-// ---------------------------------------------------------------------------
+const COLOR_HOME       = 0x3a86ff;
+const COLOR_AWAY       = Colors.actionRed;
+const COLOR_BALL       = 0xffffff;
+const COLOR_GOAL_FLASH = Colors.gold;
+
+// ── Perspective coordinate mapping ───────────────────────────────────────────
+
+function perspectiveMap(nx: number, ny: number): { x: number; y: number } {
+  const topX = PITCH_TL.x + (PITCH_TR.x - PITCH_TL.x) * nx;
+  const topY = PITCH_TL.y + (PITCH_TR.y - PITCH_TL.y) * nx;
+  const botX = PITCH_BL.x + (PITCH_BR.x - PITCH_BL.x) * nx;
+  const botY = PITCH_BL.y + (PITCH_BR.y - PITCH_BL.y) * nx;
+  return {
+    x: topX + (botX - topX) * ny,
+    y: topY + (botY - topY) * ny,
+  };
+}
+
+function depthScale(ny: number): number {
+  return 0.55 + 0.45 * ny;
+}
+
 function lerpKeyframes(keyframes: Keyframe[], t: number): { x: number; y: number } {
   if (keyframes.length === 0) return { x: 0.5, y: 0.5 };
   if (keyframes.length === 1) return { x: keyframes[0].x, y: keyframes[0].y };
-
   for (let i = 0; i < keyframes.length - 1; i++) {
     const k0 = keyframes[i];
     const k1 = keyframes[i + 1];
@@ -37,9 +56,111 @@ function lerpKeyframes(keyframes: Keyframe[], t: number): { x: number; y: number
   return { x: last.x, y: last.y };
 }
 
-// ---------------------------------------------------------------------------
-// MatchScene
-// ---------------------------------------------------------------------------
+function clamp(v: number, min: number, max: number): number {
+  return v < min ? min : v > max ? max : v;
+}
+
+// ── Player movement tuning per position ──────────────────────────────────────
+
+interface MoveFactor { followX: number; pushX: number; followY: number }
+
+const ATK: Record<Position, MoveFactor> = {
+  GK:  { followX: 0.04, pushX: 0.02, followY: 0.05 },
+  DEF: { followX: 0.12, pushX: 0.06, followY: 0.10 },
+  MID: { followX: 0.20, pushX: 0.08, followY: 0.16 },
+  FWD: { followX: 0.28, pushX: 0.10, followY: 0.20 },
+};
+
+const DEF_F: Record<Position, MoveFactor> = {
+  GK:  { followX: 0.03, pushX: 0.01, followY: 0.04 },
+  DEF: { followX: 0.08, pushX: 0.04, followY: 0.08 },
+  MID: { followX: 0.14, pushX: 0.05, followY: 0.12 },
+  FWD: { followX: 0.10, pushX: 0.03, followY: 0.10 },
+};
+
+// ── Player tracking ──────────────────────────────────────────────────────────
+
+interface PlayerInfo {
+  id: string;
+  baseX: number;
+  baseY: number;
+  position: Position;
+  isHome: boolean;
+  curX: number;
+  curY: number;
+  sprite: Container;
+  shadow: Graphics;
+  body: Graphics;
+}
+
+// ── Drawing helpers for player & ball sprites ────────────────────────────────
+
+function drawPlayerSprite(color: number, name: string): { sprite: Container; shadow: Graphics; body: Graphics } {
+  const sprite = new Container();
+
+  const shadow = new Graphics();
+  shadow.ellipse(0, 14, 10, 4);
+  shadow.fill({ color: 0x000000, alpha: 0.35 });
+  sprite.addChild(shadow);
+
+  const body = new Graphics();
+  // Legs
+  body.rect(-4, 6, 3, 8);
+  body.fill({ color: 0x222244 });
+  body.rect(1, 6, 3, 8);
+  body.fill({ color: 0x222244 });
+  // Jersey body
+  body.roundRect(-7, -6, 14, 14, 3);
+  body.fill({ color });
+  body.roundRect(-7, -6, 14, 14, 3);
+  body.stroke({ color: 0xffffff, width: 1.2 });
+  // Head
+  body.circle(0, -12, 6);
+  body.fill({ color: 0xf5d0a9 });
+  body.circle(0, -12, 6);
+  body.stroke({ color: 0xd4a574, width: 1 });
+  // Hair
+  body.arc(0, -14, 5, Math.PI, 0);
+  body.fill({ color: 0x2a1a0a });
+  sprite.addChild(body);
+
+  const label = new Text({
+    text: name.slice(0, 2),
+    style: makeTextStyle({ fontSize: 9, fontWeight: 'bold' }),
+  });
+  label.anchor.set(0.5, 0);
+  label.position.set(0, 16);
+  sprite.addChild(label);
+
+  return { sprite, shadow, body };
+}
+
+function drawBallSprite(): Graphics {
+  const g = new Graphics();
+  // Shadow
+  g.ellipse(0, 6, 6, 2.5);
+  g.fill({ color: 0x000000, alpha: 0.3 });
+  // Ball body
+  g.circle(0, 0, 6);
+  g.fill({ color: 0xffffff });
+  g.circle(0, 0, 6);
+  g.stroke({ color: 0x333333, width: 1.5 });
+  // Pentagon pattern
+  g.circle(0, 0, 2.5);
+  g.fill({ color: 0x333333 });
+  g.circle(-4, -2, 1.2);
+  g.fill({ color: 0x333333 });
+  g.circle(4, -2, 1.2);
+  g.fill({ color: 0x333333 });
+  g.circle(-3, 3, 1.2);
+  g.fill({ color: 0x333333 });
+  g.circle(3, 3, 1.2);
+  g.fill({ color: 0x333333 });
+  return g;
+}
+
+// ── MatchScene ───────────────────────────────────────────────────────────────
+
 export interface MatchSceneData {
   result: MatchResult;
   homeTeam?: Team;
@@ -50,20 +171,19 @@ export class MatchScene implements IScene {
   readonly name = 'match';
   readonly container = new Container();
 
-  private pitch: PitchView;
+  private bgSprite: Sprite | null = null;
+  private assetManager: AssetManager | null;
   private scoreText: Text;
   private minuteText: Text;
   private eventText: Text;
   private eventBg: Graphics;
 
-  // 动画层（在球场内部）
-  private pitchLayer: Container;
-  private playerDots = new Map<string, Graphics>(); // playerId → dot
-  private ballDot: Graphics;
+  private entityLayer: Container;
+  private players: PlayerInfo[] = [];
+  private ballSprite: Graphics;
   private goalFlash: Graphics;
   private goalLabel: Text;
 
-  // 播放状态
   private timeline: AnimationStep[] = [];
   private stepIndex = 0;
   private elapsed = 0;
@@ -74,21 +194,14 @@ export class MatchScene implements IScene {
   private homePlayerIds = new Set<string>();
   private onMatchEnd: (result: MatchResult) => void;
 
-  // 当前步骤缓存
-  private currentStep: AnimationStep | null = null;
   private goalFlashTimer = 0;
   private readonly GOAL_FLASH_DURATION = 1200;
 
-  // 尺寸
   private readonly W: number;
   private readonly H: number;
-  private readonly pitchX: number;
-  private readonly pitchY: number;
 
-  // ── 跳过按钮 ──────────────────────────────────────────────────────────────
   private skipBtn: Container;
 
-  // ── Tips 弹窗 ──────────────────────────────────────────────────────────────
   private tipContainer: Container;
   private tipBg: Graphics;
   private tipIconText: Text;
@@ -98,118 +211,106 @@ export class MatchScene implements IScene {
   private tipSkillNameText: Text;
   private tipAlpha = 0;
   private tipFadeTarget = 0;
-  private tipStepDuration = 1000;
-  private tipElapsed = 0;
 
-  constructor(opts: { width: number; height: number; onMatchEnd: (r: MatchResult) => void }) {
+  private ballNormX = 0.5;
+  private ballNormY = 0.5;
+  private possession: 'home' | 'away' | null = null;
+  private carrierId: string | null = null;
+
+  constructor(opts: {
+    width: number;
+    height: number;
+    onMatchEnd: (r: MatchResult) => void;
+    assetManager?: AssetManager;
+  }) {
     this.W = opts.width;
     this.H = opts.height;
     this.onMatchEnd = opts.onMatchEnd;
+    this.assetManager = opts.assetManager ?? null;
 
-    // 背景
-    const panel = new Panel({ width: opts.width, height: opts.height, color: 0x0f3460 });
-    this.container.addChild(panel);
+    // Background: loaded async on first enter, fallback to solid color
+    const bgPanel = new Graphics();
+    bgPanel.rect(0, 0, opts.width, opts.height);
+    bgPanel.fill({ color: 0x0f3460 });
+    this.container.addChild(bgPanel);
 
-    // 顶部比分栏
-    const scoreBg = new Graphics();
-    scoreBg.rect(0, 0, opts.width, 50);
-    scoreBg.fill({ color: 0x16213e });
-    this.container.addChild(scoreBg);
+    // Entity layer for players & ball (sits on top of background)
+    this.entityLayer = new Container();
+    this.entityLayer.sortableChildren = true;
+    this.container.addChild(this.entityLayer);
 
-    this.scoreText = new Text({
-      text: '0 : 0',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 28,
-        fontWeight: 'bold',
-        fill: 0xffffff,
-      }),
-    });
-    this.scoreText.anchor.set(0.5);
-    this.scoreText.position.set(opts.width / 2, 25);
-    this.container.addChild(this.scoreText);
-
-    this.minuteText = new Text({
-      text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, sans-serif',
-        fontSize: 14,
-        fill: 0xadb5bd,
-      }),
-    });
-    this.minuteText.anchor.set(0.5);
-    this.minuteText.position.set(opts.width / 2, 44);
-    this.container.addChild(this.minuteText);
-
-    // 2.5D 斜视角球场（isometric = true）
-    this.pitch = new PitchView(700, 420, true);
-    this.pitchX = (opts.width - this.pitch.pitchWidth) / 2;
-    this.pitchY = 58;
-    this.pitch.position.set(this.pitchX, this.pitchY);
-    this.container.addChild(this.pitch);
-
-    // 球场内动画层
-    this.pitchLayer = new Container();
-    this.pitchLayer.position.set(this.pitchX, this.pitchY);
-    this.container.addChild(this.pitchLayer);
-
-    // 进球闪光全屏覆盖层
+    // Goal flash overlay
     this.goalFlash = new Graphics();
     this.goalFlash.rect(0, 0, opts.width, opts.height);
     this.goalFlash.fill({ color: COLOR_GOAL_FLASH });
     this.goalFlash.alpha = 0;
     this.container.addChild(this.goalFlash);
 
-    // 进球文字
     this.goalLabel = new Text({
       text: '⚽ 进球！',
       style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontFamily: Fonts.primary,
         fontSize: 52,
         fontWeight: 'bold',
-        fill: 0xffd700,
+        fill: Colors.gold,
         stroke: { color: 0x222222, width: 6 },
-        dropShadow: { color: 0x000000, blur: 8, distance: 4, angle: Math.PI / 4 },
+        dropShadow: { color: Colors.black, blur: 8, distance: 4, angle: Math.PI / 4 },
       }),
     });
     this.goalLabel.anchor.set(0.5);
-    this.goalLabel.position.set(opts.width / 2, opts.height / 2);
+    this.goalLabel.position.set(opts.width / 2, opts.height / 2 - 30);
     this.goalLabel.alpha = 0;
     this.container.addChild(this.goalLabel);
 
-    // 球（在所有层之上）
-    this.ballDot = new Graphics();
-    this.pitchLayer.addChild(this.ballDot);
-    this.drawBall();
+    // HUD: score bar
+    const scoreBg = new Graphics();
+    scoreBg.roundRect(opts.width / 2 - 180, 6, 360, 44, 10);
+    scoreBg.fill({ color: 0x0a1628, alpha: 0.88 });
+    scoreBg.roundRect(opts.width / 2 - 180, 6, 360, 44, 10);
+    scoreBg.stroke({ color: Colors.divider, width: 1.5, alpha: 0.5 });
+    this.container.addChild(scoreBg);
 
-    // 底部事件文字（位置紧贴等效球场高度下方）
-    const effectivePitchBottom = this.pitchY + this.pitch.effectiveHeight;
-    const eventBgY = effectivePitchBottom + 8;
+    this.scoreText = new Text({
+      text: '0 : 0',
+      style: makeTextStyle({ fontSize: 24, fontWeight: 'bold' }),
+    });
+    this.scoreText.anchor.set(0.5);
+    this.scoreText.position.set(opts.width / 2, 22);
+    this.container.addChild(this.scoreText);
+
+    this.minuteText = new Text({
+      text: '',
+      style: makeTextStyle({ fontSize: 12, fill: Colors.textSecondary }),
+    });
+    this.minuteText.anchor.set(0.5);
+    this.minuteText.position.set(opts.width / 2, 40);
+    this.container.addChild(this.minuteText);
+
+    // HUD: event text at bottom
     this.eventBg = new Graphics();
-    this.eventBg.roundRect(20, eventBgY, opts.width - 40, 52, 10);
-    this.eventBg.fill({ color: 0x16213e, alpha: 0.85 });
+    this.eventBg.roundRect(opts.width / 2 - 300, opts.height - 54, 600, 44, BORDER_RADIUS_SM);
+    this.eventBg.fill({ color: 0x0a1628, alpha: 0.85 });
+    this.eventBg.roundRect(opts.width / 2 - 300, opts.height - 54, 600, 44, BORDER_RADIUS_SM);
+    this.eventBg.stroke({ color: Colors.divider, width: OUTLINE_WIDTH, alpha: 0.3 });
     this.container.addChild(this.eventBg);
 
     this.eventText = new Text({
       text: '比赛即将开始...',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 18,
-        fill: 0xf0f0f0,
-        wordWrap: true,
-        wordWrapWidth: opts.width - 60,
-        align: 'center',
-      }),
+      style: makeTextStyle({ fontSize: 16, align: 'center', wordWrap: true, wordWrapWidth: 560 }),
     });
     this.eventText.anchor.set(0.5, 0.5);
-    this.eventText.position.set(opts.width / 2, eventBgY + 26);
+    this.eventText.position.set(opts.width / 2, opts.height - 32);
     this.container.addChild(this.eventText);
 
-    // ── 跳过按钮（右下角）──────────────────────────────────────────────────
+    // Ball sprite
+    this.ballSprite = drawBallSprite();
+    this.entityLayer.addChild(this.ballSprite);
+
+    // Skip button
     this.skipBtn = this.buildSkipButton();
     this.container.addChild(this.skipBtn);
 
-    // ── Tips 弹窗层（球员 / 球之上）────────────────────────────────────────
+    // Tip overlay
     this.tipContainer = new Container();
     this.tipContainer.alpha = 0;
 
@@ -218,22 +319,14 @@ export class MatchScene implements IScene {
 
     this.tipIconText = new Text({
       text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, sans-serif',
-        fontSize: 22,
-      }),
+      style: new TextStyle({ fontFamily: Fonts.primary, fontSize: 22 }),
     });
     this.tipIconText.position.set(10, 8);
     this.tipContainer.addChild(this.tipIconText);
 
     this.tipLabelText = new Text({
       text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 13,
-        fontWeight: 'bold',
-        fill: 0xdde3ed,
-      }),
+      style: makeTextStyle({ fontSize: 13, fontWeight: 'bold', fill: 0xdde3ed }),
     });
     this.tipLabelText.position.set(38, 10);
     this.tipContainer.addChild(this.tipLabelText);
@@ -244,12 +337,7 @@ export class MatchScene implements IScene {
 
     this.tipRateText = new Text({
       text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, sans-serif',
-        fontSize: 13,
-        fontWeight: 'bold',
-        fill: 0xffffff,
-      }),
+      style: makeTextStyle({ fontSize: 13, fontWeight: 'bold' }),
     });
     this.tipRateText.position.set(10, 56);
     this.tipContainer.addChild(this.tipRateText);
@@ -257,44 +345,99 @@ export class MatchScene implements IScene {
     this.tipSkillNameText = new Text({
       text: '',
       style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
+        fontFamily: Fonts.primary,
         fontSize: 15,
         fontWeight: 'bold',
         fill: 0xffe680,
-        dropShadow: { color: 0x000000, blur: 3, distance: 1, angle: Math.PI / 4 },
+        dropShadow: { color: Colors.black, blur: 3, distance: 1, angle: Math.PI / 4 },
       }),
     });
     this.tipSkillNameText.anchor.set(0.5, 0);
     this.tipContainer.addChild(this.tipSkillNameText);
 
     this.container.addChild(this.tipContainer);
+
+    this.loadBackground();
   }
 
-  // ---------------------------------------------------------------------------
-  // 跳过按钮构建
-  // ---------------------------------------------------------------------------
+  // ── Background loading ─────────────────────────────────────────────────────
+
+  private async loadBackground(): Promise<void> {
+    try {
+      const inlineAssets: Record<string, string> | undefined =
+        (globalThis as any).__INLINE_ASSETS__;
+      const src = inlineAssets?.['assets/match/match_stadium_bg.svg']
+        ?? 'assets/match/match_stadium_bg.svg';
+      const tex = await Assets.load<Texture>(src);
+      if (tex && tex !== Texture.EMPTY) {
+        this.bgSprite = new Sprite(tex);
+        this.bgSprite.width = this.W;
+        this.bgSprite.height = this.H;
+        this.container.addChildAt(this.bgSprite, 1);
+        return;
+      }
+    } catch {
+      // SVG unavailable — draw programmatic pitch below
+    }
+    this.drawFallbackPitch();
+  }
+
+  private drawFallbackPitch(): void {
+    const g = new Graphics();
+
+    g.rect(0, 0, this.W, this.H);
+    g.fill({ color: 0x0a1628 });
+
+    const tl = PITCH_TL, tr = PITCH_TR, bl = PITCH_BL, br = PITCH_BR;
+
+    g.moveTo(tl.x, tl.y);
+    g.lineTo(tr.x, tr.y);
+    g.lineTo(br.x, br.y);
+    g.lineTo(bl.x, bl.y);
+    g.closePath();
+    g.fill({ color: 0x1e6b35 });
+
+    g.moveTo(tl.x, tl.y);
+    g.lineTo(tr.x, tr.y);
+    g.lineTo(br.x, br.y);
+    g.lineTo(bl.x, bl.y);
+    g.closePath();
+    g.stroke({ color: 0xffffff, width: 2, alpha: 0.7 });
+
+    const midTop = perspectiveMap(0.5, 0);
+    const midBot = perspectiveMap(0.5, 1);
+    g.moveTo(midTop.x, midTop.y);
+    g.lineTo(midBot.x, midBot.y);
+    g.stroke({ color: 0xffffff, width: 1.5, alpha: 0.5 });
+
+    const cc = perspectiveMap(0.5, 0.5);
+    const r = (br.x - bl.x) * 0.06;
+    g.circle(cc.x, cc.y, r);
+    g.stroke({ color: 0xffffff, width: 1.5, alpha: 0.5 });
+    g.circle(cc.x, cc.y, 3);
+    g.fill({ color: 0xffffff, alpha: 0.6 });
+
+    this.container.addChildAt(g, 1);
+  }
+
+  // ── Skip button ────────────────────────────────────────────────────────────
 
   private buildSkipButton(): Container {
     const btn = new Container();
     const BW = 90, BH = 32;
     const bx = this.W - BW - 14;
-    const by = this.H - BH - 14;
+    const by = this.H - BH - 60;
 
     const bg = new Graphics();
-    bg.roundRect(0, 0, BW, BH, 8);
-    bg.fill({ color: 0x16213e, alpha: 0.88 });
-    bg.roundRect(0, 0, BW, BH, 8);
+    bg.roundRect(0, 0, BW, BH, BORDER_RADIUS_SM);
+    bg.fill({ color: 0x0a1628, alpha: 0.88 });
+    bg.roundRect(0, 0, BW, BH, BORDER_RADIUS_SM);
     bg.stroke({ color: 0x4a9eff, width: 1.5 });
     btn.addChild(bg);
 
     const label = new Text({
       text: '跳过 ›',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 15,
-        fontWeight: 'bold',
-        fill: 0x7ec8ff,
-      }),
+      style: makeTextStyle({ fontSize: 15, fontWeight: 'bold', fill: 0x7ec8ff }),
     });
     label.anchor.set(0.5);
     label.position.set(BW / 2, BH / 2);
@@ -303,7 +446,6 @@ export class MatchScene implements IScene {
     btn.position.set(bx, by);
     btn.eventMode = 'static';
     btn.cursor = 'pointer';
-
     btn.on('pointerdown', () => this.skipToEnd());
     btn.on('pointerover', () => { bg.tint = 0xaaddff; });
     btn.on('pointerout',  () => { bg.tint = 0xffffff; });
@@ -311,13 +453,15 @@ export class MatchScene implements IScene {
     return btn;
   }
 
-  // ---------------------------------------------------------------------------
-  // IScene 生命周期
-  // ---------------------------------------------------------------------------
+  // ── Scene lifecycle ────────────────────────────────────────────────────────
 
   onEnter(data?: unknown): void {
     const d = data as MatchSceneData | undefined;
-    if (!d?.result) return;
+    if (!d?.result) {
+      this.playing = false;
+      this.result = null;
+      return;
+    }
 
     this.result = d.result;
     this.homeScore = 0;
@@ -333,8 +477,6 @@ export class MatchScene implements IScene {
     this.goalFlash.alpha = 0;
     this.goalLabel.alpha = 0;
     this.goalFlashTimer = 0;
-
-    // 隐藏 tip
     this.tipContainer.alpha = 0;
     this.tipAlpha = 0;
     this.tipFadeTarget = 0;
@@ -345,39 +487,49 @@ export class MatchScene implements IScene {
     this.elapsed = 0;
     this.playing = true;
 
-    // 初始化球员点
-    this.playerDots.forEach((dot) => this.pitchLayer.removeChild(dot));
-    this.playerDots.clear();
+    this.ballNormX = 0.5;
+    this.ballNormY = 0.5;
+    this.possession = null;
+    this.carrierId = null;
 
-    if (d.homeTeam) this.spawnTeamDots(d.homeTeam, COLOR_HOME, false);
-    if (d.awayTeam) this.spawnTeamDots(d.awayTeam, COLOR_AWAY, true);
+    // Clear old player sprites
+    for (const p of this.players) {
+      this.entityLayer.removeChild(p.sprite);
+    }
+    this.players = [];
 
-    // 球放中场
-    const center = this.pitch.normalizedToPixel(0.5, 0.5);
-    this.ballDot.position.set(center.x, center.y);
+    if (d.homeTeam) this.spawnTeam(d.homeTeam, COLOR_HOME, false);
+    if (d.awayTeam) this.spawnTeam(d.awayTeam, COLOR_AWAY, true);
 
-    // 确保球在最顶层
-    this.pitchLayer.removeChild(this.ballDot);
-    this.pitchLayer.addChild(this.ballDot);
+    const bp = perspectiveMap(0.5, 0.5);
+    this.ballSprite.position.set(bp.x, bp.y);
+    this.ballSprite.zIndex = 1000;
+
+    // Ensure ball is on top
+    this.entityLayer.removeChild(this.ballSprite);
+    this.entityLayer.addChild(this.ballSprite);
   }
 
   onExit(): void {
     this.playing = false;
   }
 
+  // ── Main update loop ───────────────────────────────────────────────────────
+
   update(dt: number): void {
     if (!this.playing || !this.result) return;
 
-    // 进球闪光衰减
+    const dtMs = dt * 16.67;
+
+    // Goal flash
     if (this.goalFlashTimer > 0) {
-      this.goalFlashTimer -= dt * 16.67;
+      this.goalFlashTimer -= dtMs;
       const progress = 1 - Math.max(0, this.goalFlashTimer / this.GOAL_FLASH_DURATION);
       this.goalFlash.alpha = Math.max(0, 0.55 * (1 - progress * 2));
       this.goalLabel.alpha = Math.max(0, 1 - progress * 1.6);
     }
 
-    // Tips 透明度平滑插值
-    this.updateTipFade(dt * 16.67);
+    this.updateTipFade(dtMs);
 
     if (this.stepIndex >= this.timeline.length) {
       this.playing = false;
@@ -386,29 +538,40 @@ export class MatchScene implements IScene {
     }
 
     const step = this.timeline[this.stepIndex];
-    this.elapsed += dt * 16.67;
-    this.currentStep = step;
+    this.elapsed += dtMs;
 
     const t = Math.min(1, this.elapsed / step.durationMs);
 
-    // 更新球的位置
+    // Ball position
     const ballNorm = lerpKeyframes(step.ballKeyframes, t);
-    const ballPx = this.pitch.normalizedToPixel(ballNorm.x, ballNorm.y);
-    this.ballDot.position.set(ballPx.x, ballPx.y);
+    this.ballNormX = ballNorm.x;
+    this.ballNormY = ballNorm.y;
+    const ballPx = perspectiveMap(ballNorm.x, ballNorm.y);
+    const bScale = depthScale(ballNorm.y);
+    this.ballSprite.position.set(ballPx.x, ballPx.y);
+    this.ballSprite.scale.set(bScale);
+    this.ballSprite.zIndex = Math.round(ballPx.y * 10);
 
-    // 高亮球员
+    // Possession & carrier from current step
+    this.possession = step.possession;
+    this.carrierId = step.carrierId;
+
+    // Move players dynamically
+    this.updatePlayerPositions(dt);
+
+    // Highlight active players
     this.updatePlayerHighlights(step.highlightPlayers);
 
-    // 控制 tip 淡出时机（步骤剩余时间 < 25% 开始淡出）
-    if (step.tip && this.elapsed / step.durationMs > 0.75) {
+    // Tip fade-out near end of step
+    if (step.tip && t > 0.75) {
       this.tipFadeTarget = 0;
     }
 
+    // Step complete
     if (this.elapsed >= step.durationMs) {
       this.elapsed = 0;
       this.eventText.text = step.description;
 
-      // 更新比分
       if (step.event.type === 'goal') {
         this.triggerGoalEffect(step.event.scorer, step.description);
       }
@@ -428,7 +591,6 @@ export class MatchScene implements IScene {
 
       this.stepIndex++;
 
-      // 下一步骤开始时展示 tip
       if (this.stepIndex < this.timeline.length) {
         const nextStep = this.timeline[this.stepIndex];
         if (nextStep.tip) {
@@ -440,70 +602,98 @@ export class MatchScene implements IScene {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 私有辅助方法
-  // ---------------------------------------------------------------------------
+  // ── Player spawning ────────────────────────────────────────────────────────
 
-  private skipToEnd(): void {
-    if (!this.result) return;
-    this.playing = false;
-    this.tipFadeTarget = 0;
-    this.tipContainer.alpha = 0;
-    this.onMatchEnd(this.result);
-  }
-
-  private spawnTeamDots(team: Team, color: number, mirror: boolean): void {
+  private spawnTeam(team: Team, color: number, mirror: boolean): void {
     for (const slot of team.formation) {
-      const nx = mirror ? 1 - slot.x : slot.x;
-      const ny = slot.y;
-      const px = this.pitch.normalizedToPixel(nx, ny);
+      const bx = mirror ? 1 - slot.x : slot.x;
+      const by = slot.y;
+      const px = perspectiveMap(bx, by);
+      const scale = depthScale(by);
 
-      const dot = new Graphics();
-      dot.circle(0, 0, 10);
-      dot.fill({ color });
-      dot.stroke({ color: 0xffffff, width: 2 });
-      dot.position.set(px.x, px.y);
+      const { sprite, shadow, body } = drawPlayerSprite(color, slot.card.name);
+      sprite.position.set(px.x, px.y);
+      sprite.scale.set(scale);
+      sprite.zIndex = Math.round(px.y * 10);
 
-      // 深度缩放：远端球员略小
-      const depthScale = 0.78 + 0.22 * ny;
-      dot.scale.set(depthScale);
+      this.entityLayer.addChild(sprite);
 
-      const label = new Text({
-        text: slot.card.name.slice(0, 2),
-        style: new TextStyle({
-          fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-          fontSize: 10,
-          fill: 0xffffff,
-          fontWeight: 'bold',
-        }),
+      this.players.push({
+        id: slot.card.id,
+        baseX: bx,
+        baseY: by,
+        position: slot.card.position,
+        isHome: !mirror,
+        curX: bx,
+        curY: by,
+        sprite,
+        shadow,
+        body,
       });
-      label.anchor.set(0.5, 0.5);
-      dot.addChild(label);
-
-      this.pitchLayer.addChild(dot);
-      this.playerDots.set(slot.card.id, dot);
     }
   }
 
-  private drawBall(): void {
-    this.ballDot.clear();
-    this.ballDot.circle(0, 0, 8);
-    this.ballDot.fill({ color: COLOR_BALL });
-    this.ballDot.stroke({ color: 0x333333, width: 2 });
-    this.ballDot.circle(0, 0, 3);
-    this.ballDot.fill({ color: 0x333333 });
+  // ── Dynamic player positioning ─────────────────────────────────────────────
+
+  private updatePlayerPositions(dt: number): void {
+    const lerpT = Math.min(1, dt * 0.06);
+
+    for (const p of this.players) {
+      const target = this.calcTarget(p);
+      p.curX += (target.x - p.curX) * lerpT;
+      p.curY += (target.y - p.curY) * lerpT;
+
+      const px = perspectiveMap(p.curX, p.curY);
+      const scale = depthScale(p.curY);
+      const highlighted = p.sprite.alpha >= 0.95;
+
+      p.sprite.position.set(px.x, px.y);
+      p.sprite.scale.set(highlighted ? scale * 1.2 : scale);
+      p.sprite.zIndex = Math.round(px.y * 10);
+    }
   }
 
+  private calcTarget(p: PlayerInfo): { x: number; y: number } {
+    const bx = this.ballNormX;
+    const by = this.ballNormY;
+
+    if (this.carrierId === p.id) {
+      return {
+        x: clamp(p.baseX + (bx - p.baseX) * 0.88, 0.03, 0.97),
+        y: clamp(p.baseY + (by - p.baseY) * 0.82, 0.05, 0.95),
+      };
+    }
+
+    if (!this.possession) {
+      return { x: p.baseX, y: p.baseY };
+    }
+
+    const attacking =
+      (p.isHome && this.possession === 'home') ||
+      (!p.isHome && this.possession === 'away');
+
+    const dir = p.isHome ? 1 : -1;
+    const f = attacking ? ATK[p.position] : DEF_F[p.position];
+
+    const pushDir = attacking ? dir : -dir;
+    const tx = p.baseX
+      + (bx - p.baseX) * f.followX
+      + f.pushX * pushDir;
+    const ty = p.baseY
+      + (by - p.baseY) * f.followY;
+
+    return {
+      x: clamp(tx, 0.03, 0.97),
+      y: clamp(ty, 0.05, 0.95),
+    };
+  }
+
+  // ── Visual helpers ─────────────────────────────────────────────────────────
+
   private updatePlayerHighlights(ids: string[]): void {
-    for (const [id, dot] of this.playerDots) {
-      const highlighted = ids.includes(id);
-      if (highlighted) {
-        dot.scale.set(1.35);
-        dot.alpha = 1;
-      } else {
-        dot.scale.set(1);
-        dot.alpha = 0.75;
-      }
+    for (const p of this.players) {
+      const highlighted = ids.includes(p.id);
+      p.sprite.alpha = highlighted ? 1 : 0.75;
     }
   }
 
@@ -514,11 +704,8 @@ export class MatchScene implements IScene {
 
   private triggerGoalEffect(scorerId: string, description: string): void {
     if (this.homePlayerIds.size > 0) {
-      if (this.homePlayerIds.has(scorerId)) {
-        this.homeScore++;
-      } else {
-        this.awayScore++;
-      }
+      if (this.homePlayerIds.has(scorerId)) this.homeScore++;
+      else this.awayScore++;
     } else {
       const finalHome = this.result?.homeGoals ?? 0;
       const finalAway = this.result?.awayGoals ?? 0;
@@ -531,37 +718,36 @@ export class MatchScene implements IScene {
       }
     }
     this.updateScoreText();
-
     this.goalFlashTimer = this.GOAL_FLASH_DURATION;
     this.goalFlash.alpha = 0.55;
     this.goalLabel.text = description;
     this.goalLabel.alpha = 1;
   }
 
-  // ---------------------------------------------------------------------------
-  // Tips 弹窗
-  // ---------------------------------------------------------------------------
+  private skipToEnd(): void {
+    if (!this.result) return;
+    this.playing = false;
+    this.tipFadeTarget = 0;
+    this.tipContainer.alpha = 0;
+    this.onMatchEnd(this.result);
+  }
+
+  // ── Tip overlay ────────────────────────────────────────────────────────────
 
   private showTipForStep(step: AnimationStep): void {
     const tip = step.tip;
     if (!tip) return;
 
-    this.tipStepDuration = step.durationMs;
-    this.tipElapsed = 0;
     this.tipFadeTarget = 1;
 
-    // 计算 tip 弹窗位置（基于球的起始位置）
     const startKf = step.ballKeyframes[0] ?? { x: 0.5, y: 0.5 };
-    const ballPx = this.pitch.normalizedToPixel(startKf.x, startKf.y);
-    const screenBallX = this.pitchX + ballPx.x;
-    const screenBallY = this.pitchY + ballPx.y;
+    const ballPx = perspectiveMap(startKf.x, startKf.y);
 
     const TIP_W = tip.type === 'skill' ? 168 : 158;
     const TIP_H = tip.type === 'skill' ? 72 : 80;
 
-    // 优先显示在球的右上方，防止越界则自动调整
-    let tx = screenBallX + 18;
-    let ty = screenBallY - TIP_H - 14;
+    let tx = ballPx.x + 18;
+    let ty = ballPx.y - TIP_H - 14;
     tx = Math.max(8, Math.min(this.W - TIP_W - 8, tx));
     ty = Math.max(56, Math.min(this.H - TIP_H - 8, ty));
 
@@ -570,7 +756,6 @@ export class MatchScene implements IScene {
   }
 
   private buildTipContent(tip: TipData, w: number, h: number): void {
-    // 背景
     this.tipBg.clear();
     this.tipBg.roundRect(0, 0, w, h, 10);
     this.tipBg.fill({ color: 0x0d1b3e, alpha: 0.92 });
@@ -582,25 +767,19 @@ export class MatchScene implements IScene {
       this.tipBg.stroke({ color: borderColor, width: 1.5 });
     }
 
-    // 图标
     this.tipIconText.text = tip.icon;
     this.tipIconText.visible = true;
-
-    // 主标签
     this.tipLabelText.text = tip.label;
     this.tipLabelText.visible = true;
 
     if (tip.type === 'rate' && tip.rate !== undefined) {
-      // 成功率进度条
       const barW = w - 20;
       const rate = tip.rate;
       const barColor = rate >= 0.55 ? 0x44cc88 : rate >= 0.35 ? 0xf0b040 : 0xff5555;
 
       this.tipRateBar.clear();
-      // 底条
       this.tipRateBar.roundRect(0, 0, barW, 10, 5);
       this.tipRateBar.fill({ color: 0x334466 });
-      // 填充条
       this.tipRateBar.roundRect(0, 0, Math.max(4, barW * rate), 10, 5);
       this.tipRateBar.fill({ color: barColor });
       this.tipRateBar.visible = true;
@@ -612,7 +791,6 @@ export class MatchScene implements IScene {
 
       this.tipSkillNameText.visible = false;
     } else if (tip.type === 'skill') {
-      // 技能名称居中展示
       this.tipSkillNameText.text = tip.label;
       this.tipSkillNameText.position.set(w / 2, 34);
       this.tipSkillNameText.visible = true;
@@ -624,7 +802,7 @@ export class MatchScene implements IScene {
   }
 
   private updateTipFade(dtMs: number): void {
-    const FADE_SPEED = 0.006; // per ms → 0 to 1 in ~166ms
+    const FADE_SPEED = 0.006;
     if (this.tipFadeTarget > this.tipAlpha) {
       this.tipAlpha = Math.min(this.tipFadeTarget, this.tipAlpha + dtMs * FADE_SPEED);
     } else if (this.tipFadeTarget < this.tipAlpha) {

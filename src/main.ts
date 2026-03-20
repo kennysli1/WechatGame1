@@ -13,6 +13,7 @@ import { AIOpponent } from './core/systems/AIOpponent.ts';
 import { WebPlatform } from './platform/WebPlatform.ts';
 import { SaveManager } from './storage/SaveManager.ts';
 import type { Team, TeamSlot } from './core/models/Team.ts';
+import { INITIAL_OWNED_CARD_IDS } from './storage/SaveManager.ts';
 
 const GAME_WIDTH  = 960;
 const GAME_HEIGHT = 640;
@@ -40,6 +41,7 @@ async function main() {
 
   const assetManager = new AssetManager();
   assetManager.setRenderer(app.renderer);
+  await assetManager.loadManifest(dataManager.getAssetManifest());
 
   const matchEngine = new MatchEngine(dataManager);
   const aiOpponent  = new AIOpponent(dataManager);
@@ -109,26 +111,45 @@ async function main() {
       }
     }
 
-    // Default: use all cards in default positions
-    const allCards = dataManager.getAllCards();
-    const defSlots: TeamSlot[] = [
-      { card: allCards.find((c) => c.position === 'GK')  ?? allCards[0], x: 0.07, y: 0.50 },
-      { card: allCards.filter((c) => c.position === 'DEF')[0] ?? allCards[1], x: 0.22, y: 0.28 },
-      { card: allCards.filter((c) => c.position === 'DEF')[1] ?? allCards[2], x: 0.22, y: 0.72 },
-      { card: allCards.filter((c) => c.position === 'MID')[0] ?? allCards[3], x: 0.45, y: 0.28 },
-      { card: allCards.filter((c) => c.position === 'MID')[1] ?? allCards[4], x: 0.45, y: 0.72 },
-      { card: allCards.filter((c) => c.position === 'FWD')[0] ?? allCards[5], x: 0.68, y: 0.33 },
-      { card: allCards.filter((c) => c.position === 'FWD')[1] ?? allCards[6], x: 0.68, y: 0.67 },
+    // Default: use initial owned cards in default positions
+    const ownedIds = saveManager.ownedCardIds.length > 0
+      ? saveManager.ownedCardIds
+      : INITIAL_OWNED_CARD_IDS;
+    const ownedCards = ownedIds
+      .map((id) => { try { return dataManager.getCard(id); } catch { return null; } })
+      .filter((c): c is import('./core/data/schemas.ts').CardDef => c !== null);
+
+    if (ownedCards.length === 0) {
+      const allCards = dataManager.getAllCards();
+      if (allCards.length > 0) ownedCards.push(...allCards.slice(0, 7));
+    }
+
+    const positionSlots: { pos: string; x: number; y: number }[] = [
+      { pos: 'GK',  x: 0.07, y: 0.50 },
+      { pos: 'DEF', x: 0.22, y: 0.28 },
+      { pos: 'DEF', x: 0.22, y: 0.72 },
+      { pos: 'MID', x: 0.45, y: 0.28 },
+      { pos: 'MID', x: 0.45, y: 0.72 },
+      { pos: 'FWD', x: 0.68, y: 0.33 },
+      { pos: 'FWD', x: 0.68, y: 0.67 },
     ];
+    const used = new Set<string>();
+    const defSlots: TeamSlot[] = positionSlots.map((ps) => {
+      const match = ownedCards.find((c) => c.position === ps.pos && !used.has(c.id));
+      const card = match ?? ownedCards.find((c) => !used.has(c.id)) ?? ownedCards[0];
+      used.add(card.id);
+      return { card, x: ps.x, y: ps.y };
+    });
     return { name: '我的球队', formation: defSlots };
   }
 
   // ── Scenes ────────────────────────────────────────────────────────────────
 
   const menuScene = new MenuScene({
-    width:       GAME_WIDTH,
-    height:      GAME_HEIGHT,
-    onStartGame: () => {
+    width:         GAME_WIDTH,
+    height:        GAME_HEIGHT,
+    assetManager,
+    onStartGame:   () => {
       sceneManager.switchTo('stageSelect', { stages: buildStageInfoList() });
     },
     onClub: () => {
@@ -180,6 +201,7 @@ async function main() {
   const matchScene = new MatchScene({
     width:  GAME_WIDTH,
     height: GAME_HEIGHT,
+    assetManager,
     onMatchEnd: (matchResult) => {
       const won       = matchResult.homeGoals > matchResult.awayGoals;
       let rewards: ResultSceneData['rewards'];

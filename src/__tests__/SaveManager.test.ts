@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SaveManager } from '../storage/SaveManager.ts';
+import { SaveManager, INITIAL_OWNED_CARD_IDS } from '../storage/SaveManager.ts';
 import { MockPlatform } from '../core/mocks/MockPlatform.ts';
 
 describe('SaveManager', () => {
@@ -12,8 +12,8 @@ describe('SaveManager', () => {
   });
 
   describe('initial state (before load)', () => {
-    it('starts with empty owned cards', () => {
-      expect(mgr.ownedCardIds).toEqual([]);
+    it('starts with initial owned cards', () => {
+      expect(mgr.ownedCardIds).toEqual(INITIAL_OWNED_CARD_IDS);
     });
 
     it('starts with empty completed stages', () => {
@@ -32,7 +32,7 @@ describe('SaveManager', () => {
   describe('load()', () => {
     it('loads default data when storage is empty', () => {
       mgr.load();
-      expect(mgr.ownedCardIds).toEqual([]);
+      expect(mgr.ownedCardIds).toEqual(INITIAL_OWNED_CARD_IDS);
       expect(mgr.coins).toBe(0);
     });
 
@@ -51,7 +51,7 @@ describe('SaveManager', () => {
     it('handles corrupt JSON gracefully', () => {
       platform.storageSet('kungfu_football_save', '{not valid json!!!');
       mgr.load();
-      expect(mgr.ownedCardIds).toEqual([]);
+      expect(mgr.ownedCardIds).toEqual(INITIAL_OWNED_CARD_IDS);
       expect(mgr.coins).toBe(0);
     });
 
@@ -59,15 +59,43 @@ describe('SaveManager', () => {
       platform.storageSet('kungfu_football_save', JSON.stringify({ version: 1, coins: 42 }));
       mgr.load();
       expect(mgr.coins).toBe(42);
-      expect(mgr.ownedCardIds).toEqual([]);
+      expect(mgr.ownedCardIds).toEqual(INITIAL_OWNED_CARD_IDS);
       expect(mgr.lastFormation).toBeNull();
+    });
+
+    it('migrates v1 save with empty ownedCardIds', () => {
+      platform.storageSet('kungfu_football_save', JSON.stringify({
+        version: 1,
+        ownedCardIds: [],
+        coins: 100,
+        completedStageIds: ['stage_001'],
+        lastFormation: null,
+        selectedFormationId: 'f_2_2_2',
+      }));
+      mgr.load();
+      expect(mgr.ownedCardIds).toEqual(INITIAL_OWNED_CARD_IDS);
+      expect(mgr.coins).toBe(100);
+      expect(mgr.completedStageIds).toContain('stage_001');
+    });
+
+    it('preserves existing ownedCardIds during v1 migration', () => {
+      platform.storageSet('kungfu_football_save', JSON.stringify({
+        version: 1,
+        ownedCardIds: ['fw_003', 'gk_002'],
+        coins: 500,
+        completedStageIds: [],
+        lastFormation: null,
+        selectedFormationId: 'f_2_2_2',
+      }));
+      mgr.load();
+      expect(mgr.ownedCardIds).toEqual(['fw_003', 'gk_002']);
     });
   });
 
   describe('addCard()', () => {
     it('adds a card id', () => {
-      mgr.addCard('fw_001');
-      expect(mgr.ownedCardIds).toContain('fw_001');
+      mgr.addCard('fw_003');
+      expect(mgr.ownedCardIds).toContain('fw_003');
     });
 
     it('does not duplicate card ids', () => {
@@ -77,10 +105,10 @@ describe('SaveManager', () => {
     });
 
     it('auto-saves after add', () => {
-      mgr.addCard('fw_001');
+      mgr.addCard('fw_003');
       const mgr2 = new SaveManager(platform);
       mgr2.load();
-      expect(mgr2.ownedCardIds).toContain('fw_001');
+      expect(mgr2.ownedCardIds).toContain('fw_003');
     });
   });
 
@@ -153,33 +181,33 @@ describe('SaveManager', () => {
 
   describe('reset()', () => {
     it('clears all data to defaults', () => {
-      mgr.addCard('fw_001');
+      mgr.addCard('fw_003');
       mgr.addCoins(999);
       mgr.completeStage('stage_01');
       mgr.setLastFormation([{ cardId: 'gk_001', x: 0.5, y: 0.9 }]);
 
       mgr.reset();
 
-      expect(mgr.ownedCardIds).toEqual([]);
+      expect(mgr.ownedCardIds).toEqual(INITIAL_OWNED_CARD_IDS);
       expect(mgr.coins).toBe(0);
       expect(mgr.completedStageIds).toEqual([]);
       expect(mgr.lastFormation).toBeNull();
     });
 
     it('removes data from storage', () => {
-      mgr.addCard('fw_001');
+      mgr.addCard('fw_003');
       mgr.reset();
 
       const mgr2 = new SaveManager(platform);
       mgr2.load();
-      expect(mgr2.ownedCardIds).toEqual([]);
+      expect(mgr2.ownedCardIds).toEqual(INITIAL_OWNED_CARD_IDS);
     });
   });
 
   describe('save() / load() round-trip', () => {
     it('preserves full state across save-load cycle', () => {
-      mgr.addCard('fw_001');
-      mgr.addCard('mf_002');
+      mgr.addCard('fw_003');
+      mgr.addCard('gk_002');
       mgr.addCoins(1234);
       mgr.completeStage('stage_01');
       mgr.completeStage('stage_02');
@@ -191,7 +219,7 @@ describe('SaveManager', () => {
       const mgr2 = new SaveManager(platform);
       mgr2.load();
 
-      expect(mgr2.ownedCardIds).toEqual(['fw_001', 'mf_002']);
+      expect(mgr2.ownedCardIds).toEqual([...INITIAL_OWNED_CARD_IDS, 'fw_003', 'gk_002']);
       expect(mgr2.coins).toBe(1234);
       expect(mgr2.completedStageIds).toEqual(['stage_01', 'stage_02']);
       expect(mgr2.lastFormation).toEqual([

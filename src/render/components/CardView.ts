@@ -1,14 +1,15 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import type { CardDef, Position } from '../../core/data/schemas.ts';
+import { Colors, OUTLINE_WIDTH, makeTextStyle } from '../theme.ts';
 
 export const CARD_WIDTH  = 128;
 export const CARD_HEIGHT = 180;
 
 const POSITION_COLORS: Record<Position, number> = {
-  FWD: 0xe63946,
-  MID: 0x457b9d,
-  DEF: 0x2a9d8f,
-  GK:  0xe9c46a,
+  FWD: Colors.cardFWD,
+  MID: Colors.cardMID,
+  DEF: Colors.cardDEF,
+  GK:  Colors.cardGK,
 };
 
 const POSITION_LABELS: Record<Position, string> = {
@@ -47,145 +48,117 @@ export class CardView extends Container {
   private buildFallback(): void {
     const col = POSITION_COLORS[this.cardDef.position];
 
-    // Background with gradient feel via layered rects
     this.bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
     this.bg.fill({ color: col });
-
-    // Darker header strip
     this.bg.roundRect(0, 0, CARD_WIDTH, 32, 10);
-    this.bg.fill({ color: 0x000000, alpha: 0.25 });
-
-    // Border
+    this.bg.fill({ color: Colors.black, alpha: 0.25 });
     this.bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
-    this.bg.stroke({ color: 0xffffff, width: 2 });
+    this.bg.stroke({ color: Colors.outline, width: OUTLINE_WIDTH });
 
-    // ── Stars ──
     const stars = '★'.repeat(this.cardDef.star) + '☆'.repeat(5 - this.cardDef.star);
     const starText = new Text({
       text: stars,
-      style: new TextStyle({ fontSize: 12, fill: 0xffd700, fontFamily: 'Arial' }),
+      style: makeTextStyle({ fontSize: 12, fill: Colors.gold }),
     });
     starText.anchor.set(0.5, 0);
     starText.position.set(CARD_WIDTH / 2, 6);
     this.addChild(starText);
 
-    // ── Position badge ──
     const badge = new Graphics();
     badge.roundRect(4, 34, 38, 18, 5);
-    badge.fill({ color: 0x000000, alpha: 0.35 });
+    badge.fill({ color: Colors.black, alpha: 0.35 });
     this.addChild(badge);
 
     const posText = new Text({
       text: POSITION_LABELS[this.cardDef.position],
-      style: new TextStyle({ fontSize: 10, fill: 0xffffff, fontFamily: 'Arial, "Microsoft YaHei", sans-serif' }),
+      style: makeTextStyle({ fontSize: 10 }),
     });
-    posText.anchor.set(0, 0);
     posText.position.set(7, 36);
     this.addChild(posText);
 
-    // ── Player name ──
     const nameText = new Text({
       text: this.cardDef.name,
-      style: new TextStyle({
-        fontSize: 17,
-        fontWeight: 'bold',
-        fill: 0xffffff,
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        align: 'center',
-      }),
+      style: makeTextStyle({ fontSize: 17, fontWeight: 'bold', align: 'center' }),
     });
     nameText.anchor.set(0.5);
     nameText.position.set(CARD_WIDTH / 2, CARD_HEIGHT * 0.42);
     this.addChild(nameText);
 
-    // ── Stats grid ──
     const stats: { label: string; value: number; color: number }[] = [
-      { label: '攻', value: this.cardDef.attack,    color: 0xff6b6b },
+      { label: '攻', value: this.cardDef.attack,    color: Colors.error },
       { label: '守', value: this.cardDef.defense,   color: 0x74c69d },
       { label: '速', value: this.cardDef.speed,     color: 0x74b9ff },
-      { label: '技', value: this.cardDef.technique, color: 0xffd93d },
+      { label: '技', value: this.cardDef.technique, color: Colors.warning },
     ];
 
     const statBg = new Graphics();
     statBg.roundRect(4, CARD_HEIGHT * 0.6, CARD_WIDTH - 8, CARD_HEIGHT * 0.34, 6);
-    statBg.fill({ color: 0x000000, alpha: 0.2 });
+    statBg.fill({ color: Colors.black, alpha: 0.2 });
     this.addChild(statBg);
 
     stats.forEach((s, i) => {
-      const col = i % 2;
+      const c = i % 2;
       const row = Math.floor(i / 2);
-      const x = 10 + col * 58;
+      const x = 10 + c * 58;
       const y = CARD_HEIGHT * 0.63 + row * 22;
 
       const lbl = new Text({
         text: s.label,
-        style: new TextStyle({ fontSize: 10, fill: s.color, fontFamily: 'Arial, "Microsoft YaHei"' }),
+        style: makeTextStyle({ fontSize: 10, fill: s.color }),
       });
       lbl.position.set(x, y);
       this.addChild(lbl);
 
       const val = new Text({
         text: String(s.value),
-        style: new TextStyle({ fontSize: 10, fill: 0xffffff, fontFamily: 'Arial', fontWeight: 'bold' }),
+        style: makeTextStyle({ fontSize: 10, fontWeight: 'bold' }),
       });
       val.position.set(x + 18, y);
       this.addChild(val);
     });
   }
 
-  /** 俱乐部模式：展示球员专项数值 */
   private buildClubCard(): void {
     const col = POSITION_COLORS[this.cardDef.position];
 
     this.bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
     this.bg.fill({ color: col });
     this.bg.roundRect(0, 0, CARD_WIDTH, 28, 10);
-    this.bg.fill({ color: 0x000000, alpha: 0.30 });
+    this.bg.fill({ color: Colors.black, alpha: 0.30 });
     this.bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
-    this.bg.stroke({ color: 0xffffff, width: 2 });
+    this.bg.stroke({ color: Colors.outline, width: OUTLINE_WIDTH });
 
-    // ── Stars ──
     const stars = '★'.repeat(this.cardDef.star) + '☆'.repeat(5 - this.cardDef.star);
     const starText = new Text({
       text: stars,
-      style: new TextStyle({ fontSize: 11, fill: 0xffd700, fontFamily: 'Arial' }),
+      style: makeTextStyle({ fontSize: 11, fill: Colors.gold }),
     });
     starText.anchor.set(0.5, 0);
     starText.position.set(CARD_WIDTH / 2, 4);
     this.addChild(starText);
 
-    // ── Position badge ──
     const badge = new Graphics();
     badge.roundRect(4, 30, 38, 16, 4);
-    badge.fill({ color: 0x000000, alpha: 0.35 });
+    badge.fill({ color: Colors.black, alpha: 0.35 });
     this.addChild(badge);
     const posText = new Text({
       text: POSITION_LABELS[this.cardDef.position],
-      style: new TextStyle({ fontSize: 9, fill: 0xffffff, fontFamily: 'Arial, "Microsoft YaHei", sans-serif' }),
+      style: makeTextStyle({ fontSize: 9 }),
     });
-    posText.anchor.set(0, 0);
     posText.position.set(7, 32);
     this.addChild(posText);
 
-    // ── Player name ──
     const nameText = new Text({
       text: this.cardDef.name,
-      style: new TextStyle({
-        fontSize: 16,
-        fontWeight: 'bold',
-        fill: 0xffffff,
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        align: 'center',
-      }),
+      style: makeTextStyle({ fontSize: 16, fontWeight: 'bold', align: 'center' }),
     });
     nameText.anchor.set(0.5);
     nameText.position.set(CARD_WIDTH / 2, CARD_HEIGHT * 0.38);
     this.addChild(nameText);
 
-    // ── Specialized stats ──
     const statBg = new Graphics();
     statBg.roundRect(4, CARD_HEIGHT * 0.56, CARD_WIDTH - 8, CARD_HEIGHT * 0.40, 6);
-    statBg.fill({ color: 0x000000, alpha: 0.22 });
+    statBg.fill({ color: Colors.black, alpha: 0.22 });
     this.addChild(statBg);
 
     const stats = this.getClubStats();
@@ -194,18 +167,16 @@ export class CardView extends Container {
 
       const lbl = new Text({
         text: s.label,
-        style: new TextStyle({ fontSize: 10, fill: s.color, fontFamily: 'Arial, "Microsoft YaHei"' }),
+        style: makeTextStyle({ fontSize: 10, fill: s.color }),
       });
       lbl.position.set(8, y);
       this.addChild(lbl);
 
-      // Value bar background
       const barBg = new Graphics();
       barBg.rect(44, y + 2, 64, 10);
-      barBg.fill({ color: 0x000000, alpha: 0.30 });
+      barBg.fill({ color: Colors.black, alpha: 0.30 });
       this.addChild(barBg);
 
-      // Value bar fill
       const barFill = new Graphics();
       barFill.rect(44, y + 2, Math.round((s.value / 100) * 64), 10);
       barFill.fill({ color: s.color, alpha: 0.85 });
@@ -213,7 +184,7 @@ export class CardView extends Container {
 
       const val = new Text({
         text: String(s.value),
-        style: new TextStyle({ fontSize: 10, fill: 0xffffff, fontFamily: 'Arial', fontWeight: 'bold' }),
+        style: makeTextStyle({ fontSize: 10, fontWeight: 'bold' }),
       });
       val.position.set(112, y);
       this.addChild(val);
@@ -224,7 +195,7 @@ export class CardView extends Container {
     const d = this.cardDef;
     if (d.position === 'GK') {
       return [
-        { label: '守门', value: d.goalkeeping, color: 0xe9c46a },
+        { label: '守门', value: d.goalkeeping, color: Colors.cardGK },
         { label: '封堵', value: d.blocking,    color: 0x74c69d },
         { label: '传球', value: d.passing,     color: 0x74b9ff },
       ];
@@ -238,49 +209,37 @@ export class CardView extends Container {
     }
     if (d.position === 'MID') {
       return [
-        { label: '带球', value: d.dribble,   color: 0xffd93d },
+        { label: '带球', value: d.dribble,   color: Colors.warning },
         { label: '传球', value: d.passing,   color: 0x74b9ff },
         { label: '抢断', value: d.tackling,  color: 0x74c69d },
       ];
     }
-    // FWD
     return [
-      { label: '带球', value: d.dribble,   color: 0xffd93d },
+      { label: '带球', value: d.dribble,   color: Colors.warning },
       { label: '传球', value: d.passing,   color: 0x74b9ff },
-      { label: '射门', value: d.shooting,  color: 0xff6b6b },
+      { label: '射门', value: d.shooting,  color: Colors.error },
     ];
   }
 
-  /**
-   * Mark the card as "placed" (already on the pitch).
-   * Placed cards are dimmed in the tray with a lock icon.
-   */
   setPlaced(placed: boolean): void {
     if (placed) {
-      // Semi-transparent dark overlay
       this.overlay.clear();
       this.overlay.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
-      this.overlay.fill({ color: 0x000000, alpha: 0.52 });
+      this.overlay.fill({ color: Colors.black, alpha: 0.52 });
 
-      // "✓ 已上场" label
-      const badge = new Graphics();
-      badge.roundRect(0, 0, 54, 20, 6);
-      badge.fill({ color: 0x27ae60, alpha: 0.9 });
-      this.overlay.addChild(badge);
-      badge.position.set((CARD_WIDTH - 54) / 2, CARD_HEIGHT / 2 - 10);
+      const badgeG = new Graphics();
+      badgeG.roundRect(0, 0, 54, 20, 6);
+      badgeG.fill({ color: 0x27ae60, alpha: 0.9 });
+      this.overlay.addChild(badgeG);
+      badgeG.position.set((CARD_WIDTH - 54) / 2, CARD_HEIGHT / 2 - 10);
 
       const label = new Text({
         text: '✓ 上场',
-        style: new TextStyle({
-          fontSize: 11,
-          fill: 0xffffff,
-          fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-          fontWeight: 'bold',
-        }),
+        style: makeTextStyle({ fontSize: 11, fontWeight: 'bold' }),
       });
       label.anchor.set(0.5);
       label.position.set(27, 10);
-      badge.addChild(label);
+      badgeG.addChild(label);
 
       this.overlay.visible = true;
       this.cursor = 'grab';

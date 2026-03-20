@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .snapshot-temp/
+.cursor/
+.claude/
 # 功夫足球_preview.html  # 快照文件纳入版本管理，供验收使用
 *.local
 

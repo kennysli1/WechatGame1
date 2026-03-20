@@ -2,7 +2,6 @@ import {
   Container,
   Graphics,
   Text,
-  TextStyle,
   type FederatedPointerEvent,
 } from 'pixi.js';
 import type { IScene } from '../SceneManager.ts';
@@ -13,8 +12,9 @@ import type { CardDef } from '../../core/data/schemas.ts';
 import type { FormationConfig } from '../../core/data/schemas.ts';
 import type { TeamSlot } from '../../core/models/Team.ts';
 import { FORMATION_CONFIGS, getFormationById, DEFAULT_FORMATION_ID } from '../../core/data/formations.ts';
+import { INITIAL_OWNED_CARD_IDS } from '../../storage/SaveManager.ts';
+import { Colors, OUTLINE_WIDTH, makeTextStyle } from '../theme.ts';
 
-// ── Layout ────────────────────────────────────────────────────────────────────
 const SCENE_W  = 960;
 const SCENE_H  = 640;
 const HEADER_H = 42;
@@ -26,17 +26,16 @@ const PITCH_W  = 556;
 const PITCH_H  = 340;
 
 const BENCH_Y  = PITCH_Y + PITCH_H + 8;
-const BENCH_H  = SCENE_H - BENCH_Y;        // ~242
+const BENCH_H  = SCENE_H - BENCH_Y;
 
 const CARD_SCALE   = 0.58;
-const CARD_W_S     = Math.round(CARD_WIDTH  * CARD_SCALE);  // ~74
-const CARD_H_S     = Math.round(CARD_HEIGHT * CARD_SCALE);  // ~104
+const CARD_W_S     = Math.round(CARD_WIDTH  * CARD_SCALE);
+const CARD_H_S     = Math.round(CARD_HEIGHT * CARD_SCALE);
 const CARD_GAP     = 10;
 const SNAP_THRESHOLD = 60;
 
-// ── Ghost helper ──────────────────────────────────────────────────────────────
 const POS_COLORS: Record<string, number> = {
-  GK: 0xe9c46a, DEF: 0x2a9d8f, MID: 0x457b9d, FWD: 0xe63946,
+  GK: Colors.cardGK, DEF: Colors.cardDEF, MID: Colors.cardMID, FWD: Colors.cardFWD,
 };
 
 function makeGhost(card: CardDef): Container {
@@ -47,18 +46,12 @@ function makeGhost(card: CardDef): Container {
   g.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
   g.fill({ color: POS_COLORS[card.position] ?? 0x666666, alpha: 0.88 });
   g.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, 10);
-  g.stroke({ color: 0xffffff, width: 2 });
+  g.stroke({ color: Colors.outline, width: OUTLINE_WIDTH });
   c.addChild(g);
 
   const t = new Text({
     text: card.name,
-    style: new TextStyle({
-      fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-      fontSize: 18,
-      fontWeight: 'bold',
-      fill: 0xffffff,
-      align: 'center',
-    }),
+    style: makeTextStyle({ fontSize: 18, fontWeight: 'bold', align: 'center' }),
   });
   t.anchor.set(0.5);
   t.position.set(CARD_WIDTH / 2, CARD_HEIGHT / 2);
@@ -68,8 +61,6 @@ function makeGhost(card: CardDef): Container {
   c.alpha = 0.82;
   return c;
 }
-
-// ── Interfaces ────────────────────────────────────────────────────────────────
 
 interface CardProvider {
   getAllCards(): CardDef[];
@@ -84,8 +75,6 @@ interface SaveProvider {
   ownedCardIds: string[];
 }
 
-// ── ClubScene ─────────────────────────────────────────────────────────────────
-
 export class ClubScene implements IScene {
   readonly name = 'club';
   readonly container = new Container();
@@ -94,31 +83,25 @@ export class ClubScene implements IScene {
   private saveManager: SaveProvider;
   private onBack: () => void;
 
-  // Formation state
   private selectedFormation: FormationConfig;
   private formationBtns: { btn: Button; config: FormationConfig }[] = [];
   private formationLabel: Text;
 
-  // Pitch
   private pitchWrapper: Container;
   private pitch: PitchView | null = null;
 
-  // Cards
   private allCards: CardDef[] = [];
   private cardViews: CardView[] = [];
   private cardViewMap = new Map<string, CardView>();
   private cardSlotMap = new Map<string, PositionSlot>();
   private placedSlots: TeamSlot[] = [];
 
-  // Bench
   private benchPanel: Graphics;
   private benchContainer: Container;
 
-  // Drag
   private isDragging = false;
   private ghost: Container | null = null;
 
-  // Status text
   private statusText: Text;
 
   constructor(opts: {
@@ -135,57 +118,36 @@ export class ClubScene implements IScene {
     this.buildHeader();
     this.buildFormationPanel();
 
-    // Pitch wrapper (will hold the PitchView, rebuilt on formation change)
     this.pitchWrapper = new Container();
     this.pitchWrapper.position.set(PITCH_X, PITCH_Y);
     this.container.addChild(this.pitchWrapper);
 
-    // Bench
     this.benchPanel = new Graphics();
     this.benchContainer = new Container();
     this.container.addChild(this.benchPanel);
     this.container.addChild(this.benchContainer);
 
-    // Status text
     this.statusText = new Text({
       text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 12,
-        fill: 0xff6b6b,
-        align: 'center',
-      }),
+      style: makeTextStyle({ fontSize: 12, fill: Colors.error }),
     });
     this.statusText.anchor.set(0.5, 0);
     this.statusText.position.set(PITCH_X + PITCH_W / 2, PITCH_Y + PITCH_H + 2);
     this.container.addChild(this.statusText);
 
-    // Formation label (below header in left panel)
     this.formationLabel = new Text({
       text: '',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 12,
-        fill: 0x74b9ff,
-        align: 'center',
-      }),
+      style: makeTextStyle({ fontSize: 12, fill: 0x74b9ff }),
     });
     this.formationLabel.anchor.set(0.5, 0);
     this.formationLabel.position.set(LEFT_W / 2, SCENE_H - 38);
     this.container.addChild(this.formationLabel);
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-
   onEnter(): void {
-    // Load saved formation
     this.selectedFormation = getFormationById(this.saveManager.selectedFormationId);
     this.highlightFormationBtn(this.selectedFormation.id);
-
-    // Load all available cards (for now, all cards from dataManager)
     this.allCards = this.loadAvailableCards();
-
-    // Rebuild pitch and bench
     this.rebuildPitch();
     this.loadSavedLineup();
     this.updateStatus();
@@ -197,33 +159,24 @@ export class ClubScene implements IScene {
     this.container.alpha = 0;
   }
 
-  // ── Background ────────────────────────────────────────────────────────────
-
   private buildBackground(): void {
     const bg = new Graphics();
     bg.rect(0, 0, SCENE_W, SCENE_H);
-    bg.fill({ color: 0x0d1b2a });
+    bg.fill({ color: Colors.bgDarker });
     this.container.addChild(bg);
   }
-
-  // ── Header ────────────────────────────────────────────────────────────────
 
   private buildHeader(): void {
     const bar = new Graphics();
     bar.rect(0, 0, SCENE_W, HEADER_H);
-    bar.fill({ color: 0x0a1628, alpha: 0.95 });
+    bar.fill({ color: Colors.headerBg, alpha: 0.95 });
     bar.rect(0, HEADER_H - 1, SCENE_W, 1);
-    bar.fill({ color: 0x3a5a7a, alpha: 0.8 });
+    bar.fill({ color: Colors.divider, alpha: 0.8 });
     this.container.addChild(bar);
 
     const title = new Text({
       text: '⚽  俱乐部',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 20,
-        fontWeight: 'bold',
-        fill: 0xf0f0f0,
-      }),
+      style: makeTextStyle({ fontSize: 20, fontWeight: 'bold' }),
     });
     title.anchor.set(0.5, 0.5);
     title.position.set(SCENE_W / 2, HEADER_H / 2);
@@ -243,61 +196,42 @@ export class ClubScene implements IScene {
 
     const tip = new Text({
       text: '拖动球员到球场上阵  •  点击已上场球员可撤回',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 11,
-        fill: 0x8899aa,
-      }),
+      style: makeTextStyle({ fontSize: 11, fill: 0x8899aa }),
     });
     tip.anchor.set(1, 0.5);
     tip.position.set(SCENE_W - 8, HEADER_H / 2);
     this.container.addChild(tip);
   }
 
-  // ── Formation Panel ───────────────────────────────────────────────────────
-
   private buildFormationPanel(): void {
-    // Panel background
     const panel = new Graphics();
     panel.rect(0, HEADER_H, LEFT_W, SCENE_H - HEADER_H);
-    panel.fill({ color: 0x0a1628, alpha: 0.90 });
+    panel.fill({ color: Colors.headerBg, alpha: 0.90 });
     panel.rect(LEFT_W - 1, HEADER_H, 1, SCENE_H - HEADER_H);
-    panel.fill({ color: 0x3a5a7a, alpha: 0.5 });
+    panel.fill({ color: Colors.divider, alpha: 0.5 });
     this.container.addChild(panel);
 
     const panelTitle = new Text({
       text: '选择阵型',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 14,
-        fontWeight: 'bold',
-        fill: 0xd0e8ff,
-      }),
+      style: makeTextStyle({ fontSize: 14, fontWeight: 'bold', fill: 0xd0e8ff }),
     });
     panelTitle.anchor.set(0.5, 0);
     panelTitle.position.set(LEFT_W / 2, HEADER_H + 10);
     this.container.addChild(panelTitle);
 
-    // Sub-title: total outfield = 6
     const subTitle = new Text({
       text: '后卫+中场+前锋 = 6',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 9,
-        fill: 0x6688aa,
-      }),
+      style: makeTextStyle({ fontSize: 9, fill: 0x6688aa }),
     });
     subTitle.anchor.set(0.5, 0);
     subTitle.position.set(LEFT_W / 2, HEADER_H + 28);
     this.container.addChild(subTitle);
 
-    // Divider
     const div = new Graphics();
     div.rect(8, HEADER_H + 48, LEFT_W - 16, 1);
-    div.fill({ color: 0x3a5a7a, alpha: 0.6 });
+    div.fill({ color: Colors.divider, alpha: 0.6 });
     this.container.addChild(div);
 
-    // Formation buttons
     const BTN_W = LEFT_W - 20;
     const BTN_H = 50;
     const BTN_GAP = 6;
@@ -330,19 +264,13 @@ export class ClubScene implements IScene {
     this.selectedFormation = getFormationById(id);
     this.saveManager.setSelectedFormationId(id);
     this.highlightFormationBtn(id);
-
-    // Clear placed lineup (formation layout changed)
     this.clearAllPlacements();
     this.saveManager.setLastFormation([]);
-
     this.rebuildPitch();
     this.updateStatus();
   }
 
-  // ── Pitch ─────────────────────────────────────────────────────────────────
-
   private rebuildPitch(): void {
-    // Destroy old pitch
     if (this.pitch) {
       this.pitchWrapper.removeChild(this.pitch);
       this.pitch.destroy({ children: true });
@@ -351,7 +279,6 @@ export class ClubScene implements IScene {
 
     this.pitch = new PitchView(PITCH_W, PITCH_H, false, this.selectedFormation.slots);
 
-    // Slot click → remove card
     for (const slot of this.pitch.slots) {
       slot.on('pointerdown', () => {
         if (!this.isDragging && slot.placedCard) {
@@ -366,10 +293,7 @@ export class ClubScene implements IScene {
     this.rebuildBench();
   }
 
-  // ── Bench ─────────────────────────────────────────────────────────────────
-
   private rebuildBench(): void {
-    // Clear existing bench views
     for (const cv of this.cardViews) {
       this.benchContainer.removeChild(cv);
       cv.destroy({ children: true });
@@ -378,31 +302,23 @@ export class ClubScene implements IScene {
     this.cardViewMap.clear();
     this.cardSlotMap.clear();
 
-    // Bench background
     this.benchPanel.clear();
     this.benchPanel.rect(LEFT_W, BENCH_Y, SCENE_W - LEFT_W, BENCH_H);
     this.benchPanel.fill({ color: 0x081320, alpha: 0.88 });
     this.benchPanel.rect(LEFT_W, BENCH_Y, SCENE_W - LEFT_W, 1.5);
-    this.benchPanel.fill({ color: 0x3a5a7a, alpha: 0.6 });
+    this.benchPanel.fill({ color: Colors.divider, alpha: 0.6 });
 
-    // Bench label
     this.benchPanel.rect(LEFT_W + 6, BENCH_Y + 4, 64, 18);
-    this.benchPanel.fill({ color: 0x1d3557, alpha: 0.7 });
+    this.benchPanel.fill({ color: Colors.btnSecondary, alpha: 0.7 });
 
-    // Clear bench container and re-add label
     this.benchContainer.removeChildren();
     const benchLabel = new Text({
       text: '球员替补席',
-      style: new TextStyle({
-        fontFamily: 'Arial, "Microsoft YaHei", sans-serif',
-        fontSize: 11,
-        fill: 0x8899aa,
-      }),
+      style: makeTextStyle({ fontSize: 11, fill: 0x8899aa }),
     });
     benchLabel.position.set(LEFT_W + 8, BENCH_Y + 5);
     this.benchContainer.addChild(benchLabel);
 
-    // Layout cards
     const startX = LEFT_W + 8;
     const cardY   = BENCH_Y + 26 + (BENCH_H - 26 - CARD_H_S) / 2;
 
@@ -419,18 +335,15 @@ export class ClubScene implements IScene {
     });
   }
 
-  // ── Load helpers ──────────────────────────────────────────────────────────
-
   private loadAvailableCards(): CardDef[] {
-    const owned = this.saveManager.ownedCardIds;
-    if (owned.length > 0) {
-      return owned.map((id) => {
-        try { return this.dataManager.getCard(id); }
-        catch { return null; }
-      }).filter((c): c is CardDef => c !== null);
+    let ids = this.saveManager.ownedCardIds;
+    if (ids.length === 0) {
+      ids = INITIAL_OWNED_CARD_IDS;
     }
-    // No owned cards recorded yet → use all cards (demo / initial state)
-    return this.dataManager.getAllCards();
+    return ids.map((id) => {
+      try { return this.dataManager.getCard(id); }
+      catch { return null; }
+    }).filter((c): c is CardDef => c !== null);
   }
 
   private loadSavedLineup(): void {
@@ -442,7 +355,6 @@ export class ClubScene implements IScene {
       const card = this.allCards.find((c) => c.id === sf.cardId);
       if (!card) continue;
 
-      // Find the nearest slot matching position
       const targetSlot = this.pitch.slots.find(
         (s) => !s.placedCard && Math.abs(s.slotDef.nx - sf.x) < 0.15 && Math.abs(s.slotDef.ny - sf.y) < 0.15,
       ) ?? this.pitch.slots.find((s) => !s.placedCard);
@@ -452,8 +364,6 @@ export class ClubScene implements IScene {
       }
     }
   }
-
-  // ── Drag & Drop ───────────────────────────────────────────────────────────
 
   private attachDragEvents(cv: CardView, card: CardDef): void {
     cv.on('pointerdown', (e: FederatedPointerEvent) => {
@@ -522,7 +432,6 @@ export class ClubScene implements IScene {
       }
     }
 
-    // Dropped outside or no snap → return to bench
     this.removeCardFromSlotById(card.id);
     cv.setPlaced(false);
     cv.alpha = 1;
@@ -540,10 +449,7 @@ export class ClubScene implements IScene {
     this.pitch?.clearHighlights();
   }
 
-  // ── Placement logic ───────────────────────────────────────────────────────
-
   private placeCardInSlot(card: CardDef, slot: PositionSlot): void {
-    // Return displaced card to bench
     const displaced = slot.removeCard();
     if (displaced && displaced.id !== card.id) {
       this.removeCardFromSlotById(displaced.id);
@@ -592,8 +498,6 @@ export class ClubScene implements IScene {
     }
   }
 
-  // ── Status ────────────────────────────────────────────────────────────────
-
   private updateStatus(): void {
     const placed = this.placedSlots.length;
     const total  = this.selectedFormation.slots.length;
@@ -619,19 +523,17 @@ export class ClubScene implements IScene {
 
     if (errors.length === 0 && placed === total) {
       this.statusText.text = `✓ 阵容就绪  ${fc.name}  已保存`;
-      this.statusText.style.fill = 0x52b788;
+      this.statusText.style.fill = Colors.success;
     } else if (errors.length > 0) {
       this.statusText.text = errors.join('  ');
-      this.statusText.style.fill = 0xff6b6b;
+      this.statusText.style.fill = Colors.error;
     } else {
       this.statusText.text = `已上阵 ${placed}/${total} 人`;
-      this.statusText.style.fill = 0xffd93d;
+      this.statusText.style.fill = Colors.warning;
     }
 
     this.formationLabel.text = `阵型: ${fc.name}  (${fc.def}-${fc.mid}-${fc.fwd})`;
   }
-
-  // ── Auto save ─────────────────────────────────────────────────────────────
 
   private autoSave(): void {
     const lineup = this.placedSlots.map((s) => ({
@@ -641,8 +543,6 @@ export class ClubScene implements IScene {
     }));
     this.saveManager.setLastFormation(lineup);
   }
-
-  // ── Public getter (for main.ts to read current lineup) ───────────────────
 
   getFormationSlots(): TeamSlot[] {
     return [...this.placedSlots];

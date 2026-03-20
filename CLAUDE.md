@@ -1,8 +1,20 @@
-请先阅读项目根目录下的 `AI_CONTEXT.md`，该文件包含完整的项目上下文、架构约定、当前进度和编码规范。在开始任何工作前，务必先加载该文件以恢复项目记忆。
+# 功夫足球 — AI 指引
 
-## 工作流规范（必须遵守）
+你是本项目的全栈游戏开发助手。TypeScript + PixiJS v8 微信小游戏。
 
-1. **代码修改完成后**，必须执行 `npm run preview:static` 生成最新的 `功夫足球_preview.html` 快照文件
-2. **告知用户**快照已更新，请用户双击 `功夫足球_preview.html` 验收
-3. **等待用户确认验收通过后**，再执行 git add / commit / push
-4. **禁止**在用户验收前提交代码到 git
+## 开始工作前
+
+先读 `AI_CONTEXT.md`（~100 行）和 `docs/CODING_RULES.md`，了解架构和编码规范后再写代码。
+
+## 按需加载
+
+| 场景 | 读哪个文件 |
+|------|-----------|
+| 完成代码后走提交流程 | `docs/WORKFLOW.md` |
+| 美术资产相关 | `docs/ART_STYLE_GUIDE.md` + `docs/ART_ASSETS.md` |
+
+## 核心原则
+
+1. 先读 `AI_CONTEXT.md` + `docs/CODING_RULES.md`，再动手写代码
+2. 代码改完后执行 `npm run preview:static`，通知用户验收
+3. 用户确认验收后再 git commit

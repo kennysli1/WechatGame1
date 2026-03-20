@@ -2,7 +2,7 @@
   {
     "id": "skill_save",
     "name": "神扑",
-    "description": "提升扑救成功率",
+    "description": "关键时刻扑出必进球",
     "type": "passive",
     "target": "self",
     "effectType": "buff_defense",
@@ -15,7 +15,7 @@
   {
     "id": "skill_tackle",
     "name": "飞铲",
-    "description": "提升铲断能力",
+    "description": "凶猛的铲断技术",
     "type": "passive",
     "target": "self",
     "effectType": "buff_defense",
@@ -28,7 +28,7 @@
   {
     "id": "skill_shot",
     "name": "暴力射门",
-    "description": "提升射门威力",
+    "description": "蓄力射出势大力沉的射门",
     "type": "active",
     "target": "self",
     "effectType": "buff_attack",
@@ -41,7 +41,7 @@
   {
     "id": "skill_dribble",
     "name": "灵巧过人",
-    "description": "提升突破成功率",
+    "description": "闪转腾挪突破防线",
     "type": "active",
     "target": "self",
     "effectType": "buff_speed",
@@ -54,7 +54,7 @@
   {
     "id": "skill_through",
     "name": "致命直塞",
-    "description": "提升传球精准度",
+    "description": "一脚精准直塞撕裂防线",
     "type": "active",
     "target": "team",
     "effectType": "buff_technique",
@@ -67,7 +67,7 @@
   {
     "id": "skill_freekick",
     "name": "任意球大师",
-    "description": "获得额外定位球机会",
+    "description": "定位球直挂死角",
     "type": "active",
     "target": "self",
     "effectType": "buff_technique",
@@ -76,5 +76,83 @@
     "triggerCondition": "on_shot",
     "animKey": "anim_freekick",
     "cooldown": 5
+  },
+  {
+    "id": "skill_iron_wall",
+    "name": "铁壁防守",
+    "description": "铜墙铁壁固若金汤",
+    "type": "passive",
+    "target": "self",
+    "effectType": "buff_defense",
+    "effectValue": 18,
+    "duration": 0,
+    "triggerCondition": "on_tackle",
+    "animKey": "anim_iron_wall",
+    "cooldown": 0
+  },
+  {
+    "id": "skill_thunder",
+    "name": "雷霆射门",
+    "description": "如雷霆般的暴力远射",
+    "type": "active",
+    "target": "self",
+    "effectType": "buff_attack",
+    "effectValue": 25,
+    "duration": 1,
+    "triggerCondition": "on_shot",
+    "animKey": "anim_thunder",
+    "cooldown": 4
+  },
+  {
+    "id": "skill_shadow",
+    "name": "鬼影步法",
+    "description": "身法诡异让对手无法捕捉",
+    "type": "active",
+    "target": "self",
+    "effectType": "buff_speed",
+    "effectValue": 22,
+    "duration": 1,
+    "triggerCondition": "on_pass",
+    "animKey": "anim_shadow",
+    "cooldown": 3
+  },
+  {
+    "id": "skill_eagle",
+    "name": "鹰眼长传",
+    "description": "精准的长距离传球找到队友",
+    "type": "active",
+    "target": "team",
+    "effectType": "buff_technique",
+    "effectValue": 18,
+    "duration": 2,
+    "triggerCondition": "on_pass",
+    "animKey": "anim_eagle",
+    "cooldown": 3
+  },
+  {
+    "id": "skill_dragon",
+    "name": "龙门飞渡",
+    "description": "化身蛟龙飞扑封堵一切射门",
+    "type": "active",
+    "target": "self",
+    "effectType": "buff_defense",
+    "effectValue": 30,
+    "duration": 1,
+    "triggerCondition": "on_shot",
+    "animKey": "anim_dragon",
+    "cooldown": 5
+  },
+  {
+    "id": "skill_tiger",
+    "name": "猛虎断球",
+    "description": "如猛虎下山般凶猛断球",
+    "type": "active",
+    "target": "self",
+    "effectType": "buff_defense",
+    "effectValue": 20,
+    "duration": 1,
+    "triggerCondition": "on_tackle",
+    "animKey": "anim_tiger",
+    "cooldown": 3
   }
 ]

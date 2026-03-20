@@ -1,111 +1,195 @@
 [
   {
     "teamId": "ai_team_001",
-    "teamName": "新手挑战队",
+    "teamName": "菜鸟练习队",
     "difficulty": 1,
     "slots": [
       {
-        "cardId": "gk_001",
+        "cardId": "ai_gk_01",
         "x": 0.05,
         "y": 0.5
       },
       {
-        "cardId": "df_001",
+        "cardId": "ai_df_01",
         "x": 0.2,
-        "y": 0.3
-      },
-      {
-        "cardId": "df_002",
-        "x": 0.2,
-        "y": 0.7
-      },
-      {
-        "cardId": "mf_001",
-        "x": 0.4,
         "y": 0.5
       },
       {
-        "cardId": "fw_002",
-        "x": 0.7,
+        "cardId": "ai_mf_01",
+        "x": 0.42,
+        "y": 0.35
+      },
+      {
+        "cardId": "ai_mf_02",
+        "x": 0.42,
+        "y": 0.65
+      },
+      {
+        "cardId": "ai_fw_01",
+        "x": 0.68,
         "y": 0.5
       }
     ]
   },
   {
     "teamId": "ai_team_002",
-    "teamName": "实力对手",
+    "teamName": "街头霸王队",
     "difficulty": 2,
     "slots": [
       {
-        "cardId": "gk_001",
+        "cardId": "ai_gk_01",
         "x": 0.05,
         "y": 0.5
       },
       {
-        "cardId": "df_001",
+        "cardId": "ai_df_01",
         "x": 0.2,
         "y": 0.3
       },
       {
-        "cardId": "df_002",
+        "cardId": "ai_df_02",
         "x": 0.2,
         "y": 0.7
       },
       {
-        "cardId": "mf_001",
-        "x": 0.4,
-        "y": 0.3
+        "cardId": "ai_mf_02",
+        "x": 0.42,
+        "y": 0.35
       },
       {
-        "cardId": "mf_002",
-        "x": 0.4,
-        "y": 0.7
+        "cardId": "ai_mf_03",
+        "x": 0.42,
+        "y": 0.65
       },
       {
-        "cardId": "fw_001",
-        "x": 0.7,
+        "cardId": "ai_fw_02",
+        "x": 0.68,
         "y": 0.5
       }
     ]
   },
   {
     "teamId": "ai_team_003",
-    "teamName": "精英劲旅",
+    "teamName": "武当少年队",
     "difficulty": 3,
     "slots": [
       {
-        "cardId": "gk_001",
+        "cardId": "ai_gk_02",
         "x": 0.05,
         "y": 0.5
       },
       {
-        "cardId": "df_001",
+        "cardId": "ai_df_02",
         "x": 0.2,
         "y": 0.3
       },
       {
-        "cardId": "df_002",
+        "cardId": "ai_df_03",
         "x": 0.2,
         "y": 0.7
       },
       {
-        "cardId": "mf_001",
-        "x": 0.4,
+        "cardId": "ai_mf_03",
+        "x": 0.42,
         "y": 0.3
       },
       {
-        "cardId": "mf_002",
-        "x": 0.4,
+        "cardId": "ai_mf_04",
+        "x": 0.42,
         "y": 0.7
       },
       {
-        "cardId": "fw_001",
-        "x": 0.65,
+        "cardId": "ai_fw_02",
+        "x": 0.68,
         "y": 0.35
       },
       {
-        "cardId": "fw_003",
-        "x": 0.65,
+        "cardId": "ai_fw_03",
+        "x": 0.68,
+        "y": 0.65
+      }
+    ]
+  },
+  {
+    "teamId": "ai_team_004",
+    "teamName": "少林精英队",
+    "difficulty": 4,
+    "slots": [
+      {
+        "cardId": "ai_gk_02",
+        "x": 0.05,
+        "y": 0.5
+      },
+      {
+        "cardId": "ai_df_03",
+        "x": 0.2,
+        "y": 0.3
+      },
+      {
+        "cardId": "ai_df_04",
+        "x": 0.2,
+        "y": 0.7
+      },
+      {
+        "cardId": "ai_mf_04",
+        "x": 0.42,
+        "y": 0.3
+      },
+      {
+        "cardId": "ai_mf_05",
+        "x": 0.42,
+        "y": 0.7
+      },
+      {
+        "cardId": "ai_fw_03",
+        "x": 0.68,
+        "y": 0.35
+      },
+      {
+        "cardId": "ai_fw_04",
+        "x": 0.68,
+        "y": 0.65
+      }
+    ]
+  },
+  {
+    "teamId": "ai_team_005",
+    "teamName": "天下第一队",
+    "difficulty": 5,
+    "slots": [
+      {
+        "cardId": "ai_gk_03",
+        "x": 0.05,
+        "y": 0.5
+      },
+      {
+        "cardId": "ai_df_04",
+        "x": 0.2,
+        "y": 0.3
+      },
+      {
+        "cardId": "ai_df_05",
+        "x": 0.2,
+        "y": 0.7
+      },
+      {
+        "cardId": "ai_mf_05",
+        "x": 0.42,
+        "y": 0.3
+      },
+      {
+        "cardId": "ai_mf_04",
+        "x": 0.42,
+        "y": 0.7
+      },
+      {
+        "cardId": "ai_fw_04",
+        "x": 0.68,
+        "y": 0.35
+      },
+      {
+        "cardId": "ai_fw_05",
+        "x": 0.68,
         "y": 0.65
       }
     ]

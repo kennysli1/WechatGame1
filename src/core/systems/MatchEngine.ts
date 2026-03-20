@@ -86,7 +86,7 @@ export class MatchEngine implements IMatchEngine {
     // 开球：主场略占优势
     const firstKickoff: 'home' | 'away' =
       rng.next() < 0.5 + params.homeAdvantage * 0.02 ? 'home' : 'away';
-    events.push({ type: 'kickoff', minute: 0 });
+    events.push({ type: 'kickoff', minute: 0, ballPos: { x: 0.5, y: 0.5 } });
     let ball = this.initKickoff(firstKickoff, home, away, rng);
 
     let minute = 1;
@@ -284,18 +284,21 @@ export class MatchEngine implements IMatchEngine {
       ));
       const interceptSuccess = rng.next() < interceptChance;
 
+      const interceptorFieldPos = this.playerFieldPos(interceptor, defSide);
       events.push({
         type: 'intercept',
         minute,
         interceptor: interceptor.card.id,
         passer: carrier.card.id,
         success: interceptSuccess,
+        fromPos: { x: ballPos.x, y: ballPos.y },
+        interceptPos: { x: interceptorFieldPos.x, y: interceptorFieldPos.y },
       });
 
       if (interceptSuccess) {
-        events.push({ type: 'pass', minute, from: carrier.card.id, to: target.card.id, success: false });
         const midX = (ballPos.x + targetPos.x) / 2;
         const midY = (ballPos.y + targetPos.y) / 2;
+        events.push({ type: 'pass', minute, from: carrier.card.id, to: target.card.id, success: false, fromPos: ballPos, toPos: { x: midX, y: midY } });
         return {
           goalScored: false,
           newBall: { team: defSide, carrier: interceptor, x: midX, y: midY },
@@ -309,11 +312,10 @@ export class MatchEngine implements IMatchEngine {
       (ball.team === 'home' ? params.homeAdvantage : 1.0);
     const passSuccess = rng.next() < passChance;
 
-    events.push({ type: 'pass', minute, from: carrier.card.id, to: target.card.id, success: passSuccess });
-
     if (!passSuccess) {
       const midX = ball.x * 0.6 + targetPos.x * 0.4;
       const midY = ball.y * 0.6 + targetPos.y * 0.4;
+      events.push({ type: 'pass', minute, from: carrier.card.id, to: target.card.id, success: false, fromPos: ballPos, toPos: { x: midX, y: midY } });
       const nearest = this.getNearestDefender({ x: midX, y: midY }, defendTeam.formation, defSide);
       return {
         goalScored: false,
@@ -321,7 +323,8 @@ export class MatchEngine implements IMatchEngine {
       };
     }
 
-    // 传球成功：接球者持球
+    events.push({ type: 'pass', minute, from: carrier.card.id, to: target.card.id, success: true, fromPos: ballPos, toPos: targetPos });
+
     return {
       goalScored: false,
       newBall: {
@@ -389,6 +392,7 @@ export class MatchEngine implements IMatchEngine {
         tackler: bestTackler.card.id,
         target: carrier.card.id,
         success: tackled,
+        ballPos: { x: ball.x, y: ball.y },
       });
     }
 
@@ -444,7 +448,8 @@ export class MatchEngine implements IMatchEngine {
     const blockers = this.getShotBlockers(shooterPos, goalPos, defendTeam.formation, defSide);
     if (blockers.length > 0 && rng.next() < params.blockBaseChance) {
       const blocker = this.pickBestDefender(rng, blockers);
-      events.push({ type: 'block', minute, blocker: blocker.card.id, shooter: carrier.card.id });
+      const blockerFieldPos = this.playerFieldPos(blocker, defSide);
+      events.push({ type: 'block', minute, blocker: blocker.card.id, shooter: carrier.card.id, fromPos: shooterPos, blockerPos: blockerFieldPos });
       return {
         goalScored: false,
         newBall: { team: defSide, carrier: blocker, x: ball.x, y: ball.y },
@@ -458,10 +463,9 @@ export class MatchEngine implements IMatchEngine {
     const shotPower = atk * params.shotPowerWeight + tech * (1 - params.shotPowerWeight);
     const onTarget = rng.next() < Math.min(0.82, shotPower * 0.008);
 
-    events.push({ type: 'shot', minute, player: carrier.card.id, onTarget });
+    events.push({ type: 'shot', minute, player: carrier.card.id, onTarget, fromPos: shooterPos, targetPos: goalPos });
 
     if (!onTarget) {
-      // 偏出，门将拿球或角球（简化为门将持球）
       const gk = this.getGK(defendTeam);
       return {
         goalScored: false,
@@ -477,7 +481,7 @@ export class MatchEngine implements IMatchEngine {
       const saveChance = Math.max(0.10, Math.min(0.82, gkDef * 0.006));
       const saved = rng.next() < saveChance;
       if (saved) {
-        events.push({ type: 'save', minute, goalkeeper: gkSlot.card.id });
+        events.push({ type: 'save', minute, goalkeeper: gkSlot.card.id, ballPos: goalPos });
         return {
           goalScored: false,
           newBall: { team: defSide, carrier: gkSlot, x: goalPos.x, y: goalPos.y },
@@ -490,7 +494,7 @@ export class MatchEngine implements IMatchEngine {
       ball.lastPasser && ball.lastPasser.card.id !== carrier.card.id
         ? ball.lastPasser.card.id
         : undefined;
-    events.push({ type: 'goal', minute, scorer: carrier.card.id, assist });
+    events.push({ type: 'goal', minute, scorer: carrier.card.id, assist, fromPos: shooterPos, goalPos });
     return { goalScored: true, newBall: ball };
   }
 
@@ -681,6 +685,7 @@ export class MatchEngine implements IMatchEngine {
           player: card.id,
           skillId: skill.id,
           targets: [card.id],
+          ballPos: undefined,
         });
       }
     }

@@ -1,5 +1,10 @@
 import type { IPlatform } from '../platform/IPlatform.ts';
 
+/** 新玩家初始拥有的 7 张球员卡（1GK + 2DEF + 2MID + 2FWD） */
+export const INITIAL_OWNED_CARD_IDS = [
+  'gk_001', 'df_001', 'df_002', 'mf_001', 'mf_002', 'fw_001', 'fw_002',
+];
+
 interface SaveData {
   version: number;
   ownedCardIds: string[];
@@ -10,12 +15,12 @@ interface SaveData {
 }
 
 const SAVE_KEY = 'kungfu_football_save';
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 function defaultSave(): SaveData {
   return {
     version: CURRENT_VERSION,
-    ownedCardIds: [],
+    ownedCardIds: [...INITIAL_OWNED_CARD_IDS],
     completedStageIds: [],
     coins: 0,
     lastFormation: null,
@@ -34,14 +39,28 @@ export class SaveManager {
     const raw = this.platform.storageGet(SAVE_KEY);
     if (!raw) {
       this.data = defaultSave();
+      this.save();
       return;
     }
     try {
       const parsed = JSON.parse(raw) as SaveData;
       this.data = { ...defaultSave(), ...parsed };
+      this.migrate();
     } catch {
       console.warn('[SaveManager] corrupt save data, resetting');
       this.data = defaultSave();
+      this.save();
+    }
+  }
+
+  private migrate(): void {
+    const oldVersion = this.data.version ?? 1;
+    if (oldVersion < 2) {
+      if (this.data.ownedCardIds.length === 0) {
+        this.data.ownedCardIds = [...INITIAL_OWNED_CARD_IDS];
+      }
+      this.data.version = CURRENT_VERSION;
+      this.save();
     }
   }
 
